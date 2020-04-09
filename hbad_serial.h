@@ -1,5 +1,6 @@
 #define START_DELIM '$'
 #define END_DELIM '&'
+#define VENT_MAST "VM"
 #define CMD_PACKET_SIZE 10
 
 /*

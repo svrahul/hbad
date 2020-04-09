@@ -32,6 +32,7 @@ void setup() {
 }
 
 void loop() {
+  sendCommands();
   announce();
   processRotation();
   showSelectedParam();
@@ -40,7 +41,25 @@ void loop() {
     delay(2000);
   }
 }
-
+void sendCommands() {
+  String oprName="P";
+  String command;
+  char paddedValue[3];
+  int size = sizeof(params)/sizeof(params[0]);
+  for(int i=0;i<size-2;i++){
+   // padding(params[i].value_curr_mem, 4 );
+   command = START_DELIM;
+   command +=VENT_MAST;
+   command += oprName + i;
+     sprintf(paddedValue, "%04d",
+        params[i].value_curr_mem);
+   command += paddedValue;
+   command += END_DELIM;
+   Serial.println(command);
+   delay(3000);
+  }
+  
+}
 void announce() {
   if (announced == 0) {
     listDisplayMode();
