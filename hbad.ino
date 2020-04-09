@@ -73,7 +73,7 @@ void listDisplayMode() {
 }
 
 void editParameterMode() {
-  if (switchMode == EDIT_MODE_ON) {
+  if (switchMode == EDIT_MODE) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(mode_headers[switchMode]);
@@ -83,7 +83,9 @@ int processRotation() {
   int lastCLK = digitalRead(DISP_ENC_CLK);
   int cursorIndex = 0;
   /*Index_select loop*/
-  while (switchMode == EDIT_MODE_ON || ierSelect || peepSelect) {
+  while (switchMode == EDIT_MODE || ierSelect || peepSelect) {
+    Serial.print("switchMode\t");
+    Serial.println(switchMode);
     if (lastCLK == digitalRead(DISP_ENC_CLK)) {
       continue;
     }
@@ -97,25 +99,27 @@ int processRotation() {
     } else if (digitalRead(DISP_ENC_CLK) != digitalRead(DISP_ENC_DT)) {
       cursorIndex++;
     }
+    unsigned short int retVal;
     if (ierSelect) {
       newIER = rectifyBoundaries(newIER + cursorIndex, inex_rati.min_val, inex_rati.max_val);
       cleanRow(1);
       lcd.setCursor(10, 1);
       lcd.print("1:");
       lcd.print(newIER);
-      return newIER;
+      retVal = newIER;
     } else if (peepSelect) {
       newPeep = rectifyBoundaries(newPeep + cursorIndex * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
       lcd.setCursor(10, 1);
       lcd.print(newPeep);
-      return newPeep;
+      retVal = newPeep;
     } else {
       currPos = currPos + cursorIndex;
       currPos = rectifyBoundaries(currPos + cursorIndex, 0, MAX_CTRL_PARAMS);
       cleanRow(1);
-      return currPos;
+      retVal = currPos;
     }
     delay(100);
+    return retVal;
   }
   return 0;
 }
@@ -153,6 +157,7 @@ void saveSelectedParam() {
     switchMode = DISPLAY_MODE;
     actionPending = 0;
     ierSelect = false;
+    peepSelect = false;
     lcd.setCursor(0, 4);
     lcd.print(params[currPos - 1].parm_name);
     lcd.print(" saved.....");

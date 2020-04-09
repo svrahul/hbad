@@ -6,7 +6,7 @@
 #define MAX_IDLE_AFTER_SEL 10000000 //uSecs
 #define POT_TURN_MAX_WAIT_MILLIS 2000
 #define DISPLAY_MODE 0
-#define EDIT_MODE_ON 1
+#define EDIT_MODE 1
 #define PAR_SELECTED_MODE 2
 #define PAR_SAVE_MODE 3
 #define POT_HIGH 1000
