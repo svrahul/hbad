@@ -144,7 +144,10 @@ void isr_processStartEdit() {
   actionPending = 1;
   lastSwitchTime = switchTime;
 }
-
+/*
+ * The getCalibValue is for calibrating any integer to a parameter.
+ * The parameter is input with the help of an index
+ */
 float getCalibValue(int potValue, int paramIndex){
   float convVal = map(potValue, 0,POT_HIGH, param_range_min[paramIndex], param_range_max[paramIndex]);
   return ((int)(convVal / param_incr[paramIndex]) + 1) * param_incr[paramIndex];
