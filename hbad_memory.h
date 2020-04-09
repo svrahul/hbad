@@ -21,9 +21,6 @@ void storeParam(ctrl_parameter_t param) {
   byte dataToStore[2] = {param.value_new_pot >> 8, param.value_new_pot};
   int storeAddress = EEPROM_BASE_ADDR + (2 * (param.index - 1));
   hbad_mem.write(storeAddress, dataToStore, 2);
-  param.value_curr_mem = param.value_new_pot;
-  lcd.print(param.parm_name);
-  lcd.print(" saved.....");
 }
 
 void retrieveParam(ctrl_parameter_t param) {

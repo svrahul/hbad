@@ -1,19 +1,24 @@
 static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 
-#include <Encoder.h>
+//#include <Encoder.h>
 #include <Wire.h>
 #include "pinout.h"
 #include "ctrl_display.h"
 #include "lcd.h"
 #include "hbad_serial.h"
 #include "hbad_memory.h"
+#include "calib.h"
 
-volatile int currPos = 1;
+volatile short currPos = 1;
+unsigned short newIER = 1;
+unsigned short newPeep = 5;
+
 int ctrlParamChangeInit = 0;
 volatile int switchMode = 0;
 volatile static short announced = 0;
-volatile short actionPending = 1;
-
+volatile boolean actionPending = true;
+boolean ierSelect = false;
+boolean peepSelect = false;
 void setup() {
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
@@ -31,7 +36,7 @@ void loop() {
   processRotation();
   showSelectedParam();
   saveSelectedParam();
-  if (actionPending == 1) {
+  if (actionPending) {
     delay(2000);
   }
 }
@@ -44,6 +49,8 @@ void announce() {
 }
 
 void listDisplayMode() {
+  Serial.print("switchMode\t");
+  Serial.println(switchMode);
   if (switchMode == DISPLAY_MODE) {
     unsigned int nextLine = 1;
     for (int i = 0; i < MAX_CTRL_PARAMS; i++) {
@@ -76,28 +83,38 @@ int processRotation() {
   int lastCLK = digitalRead(DISP_ENC_CLK);
   int cursorIndex = 0;
   /*Index_select loop*/
-  while (switchMode == EDIT_MODE_ON) {
+  while (switchMode == EDIT_MODE_ON || ierSelect || peepSelect) {
     if (lastCLK == digitalRead(DISP_ENC_CLK)) {
       continue;
     }
     if (lastCLK == 0 ) {
       continue;
     }
-    if (digitalRead(DISP_ENC_CLK) == digitalRead(DISP_ENC_DT)) {
-      cursorIndex--;
-      if (cursorIndex <= 0) {
-        cursorIndex = MAX_CTRL_PARAMS;
-      }
-    } else if (digitalRead(DISP_ENC_CLK) != digitalRead(DISP_ENC_DT)) {
-      cursorIndex++;
-      if (cursorIndex > MAX_CTRL_PARAMS) {
-        cursorIndex = 1;
-      }
-    }
-    currPos = cursorIndex;
-    cleanRow(1);
     lcd.setCursor(0, 1);
     lcd.print(params[currPos - 1].parm_name);
+    if (digitalRead(DISP_ENC_CLK) == digitalRead(DISP_ENC_DT)) {
+      cursorIndex--;
+    } else if (digitalRead(DISP_ENC_CLK) != digitalRead(DISP_ENC_DT)) {
+      cursorIndex++;
+    }
+    if (ierSelect) {
+      newIER = rectifyBoundaries(newIER + cursorIndex, inex_rati.min_val, inex_rati.max_val);
+      cleanRow(1);
+      lcd.setCursor(10, 1);
+      lcd.print("1:");
+      lcd.print(newIER);
+      return newIER;
+    } else if (peepSelect) {
+      newPeep = rectifyBoundaries(newPeep + cursorIndex * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
+      lcd.setCursor(10, 1);
+      lcd.print(newPeep);
+      return newPeep;
+    } else {
+      currPos = currPos + cursorIndex;
+      currPos = rectifyBoundaries(currPos + cursorIndex, 0, MAX_CTRL_PARAMS);
+      cleanRow(1);
+      return currPos;
+    }
     delay(100);
   }
   return 0;
@@ -107,13 +124,21 @@ void showSelectedParam() {
   while (switchMode == PAR_SELECTED_MODE) {
     lcd.setCursor(0, 1);
     lcd.print(params[currPos - 1].parm_name);
+    if (currPos == inex_rati.index) {
+      ierSelect = true;
+      return;
+    }
+    if (currPos == peep_pres.index) {
+      peepSelect = true;
+      return;
+    }
     params[currPos - 1].value_new_pot = analogRead(analog_pins[currPos - 1]);
     lcd.setCursor(10, 1);
     sprintf(paddedValue, "%4d", params[currPos - 1].value_new_pot);
     lcd.print(paddedValue);
     float actualValue = getCalibValue(params[currPos - 1].value_new_pot, currPos - 1);
     lcd.setCursor(10, 2);
-    lcd.print(actualValue,2);
+    lcd.print(actualValue, 2);
     lcd.setCursor(10, 3);
     float storedValue = getCalibValue(params[currPos - 1].value_curr_mem, currPos - 1);
     lcd.print(storedValue);
@@ -124,12 +149,13 @@ void showSelectedParam() {
 void saveSelectedParam() {
   if (switchMode == PAR_SAVE_MODE) {
     storeParam(params[currPos - 1]);
-    Serial.print("abcdef ");
-    Serial.println(switchMode);
-    lcd.setCursor(0, 4);
-    lcd.print(params[currPos - 1].parm_name);
+    params[currPos - 1].value_curr_mem = params[currPos - 1].value_new_pot;
     switchMode = DISPLAY_MODE;
     actionPending = 0;
+    ierSelect = false;
+    lcd.setCursor(0, 4);
+    lcd.print(params[currPos - 1].parm_name);
+    lcd.print(" saved.....");
   }
 }
 
@@ -145,19 +171,28 @@ void isr_processStartEdit() {
   lastSwitchTime = switchTime;
 }
 /*
- * The getCalibValue is for calibrating any integer to a parameter.
- * The parameter is input with the help of an index
- */
-float getCalibValue(int potValue, int paramIndex){
-  float convVal = map(potValue, 0,POT_HIGH, param_range_min[paramIndex], param_range_max[paramIndex]);
-  return ((int)(convVal / param_incr[paramIndex]) + 1) * param_incr[paramIndex];
+   The getCalibValue is for calibrating any integer to a parameter.
+   The parameter is input with the help of an index
+*/
+float getCalibValue(int potValue, int paramIndex) {
+  float convVal = map(potValue, 0, POT_HIGH, params[paramIndex].min_val, params[paramIndex].max_val);
+  return ((int)(convVal / params[paramIndex].incr) + 1) * params[paramIndex].incr;
 }
 
 /*
- * The below method is for a specific parameter
- */
-float getCalibratedParam(ctrl_parameter_t param){
-  unsigned short paramIdx = param.index - 1;
-  float convVal = map(param.value_curr_mem, 0,POT_HIGH, param.min_val, param.max_val);
-  return ((int)(convVal / param_incr[paramIdx]) + 1) * param_incr[paramIdx];
+   The below method is for a specific parameter
+*/
+float getCalibratedParam(ctrl_parameter_t param) {
+  float convVal = map(param.value_curr_mem, 0, POT_HIGH, param.min_val, param.max_val);
+  return ((int)(convVal / param.incr) + 1) * param.incr;
+}
+
+int rectifyBoundaries(int value, int minimum, int maximum) {
+  if (value < minimum) {
+    return maximum;
+  }
+  if (value > maximum) {
+    return minimum;
+  }
+  return value;
 }
