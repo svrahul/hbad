@@ -56,7 +56,7 @@ void listDisplayMode() {
       lcd.setCursor(0, nextLine);
       lcd.print(params[i].parm_name);
       lcd.setCursor(14, nextLine);
-      lcd.print(params[i].value_curr_mem);
+      lcd.print(getCalibratedParam(params[i]));
       nextLine++;
       if (nextLine > 3) {
         delay(3000);

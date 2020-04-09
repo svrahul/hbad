@@ -1,5 +1,5 @@
-#define START_DELIM $
-#define START_DELIM &
+#define START_DELIM '$'
+#define END_DELIM '&'
 #define CMD_PACKET_SIZE 10
 
 /*
