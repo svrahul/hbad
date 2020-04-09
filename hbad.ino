@@ -6,8 +6,8 @@ static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 #include "ctrl_display.h"
 #include "lcd.h"
 #include "hbad_serial.h"
-#include "hbad_memory.h"
-#include "calib.h"
+//#include "hbad_memory.h"
+#include "calib_calc_m_c.h"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -19,6 +19,7 @@ volatile static short announced = 0;
 volatile boolean actionPending = true;
 boolean ierSelect = false;
 boolean peepSelect = false;
+
 void setup() {
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
@@ -29,6 +30,9 @@ void setup() {
   Wire.begin();
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
+  setup_calib_calc_m_c();
+  calc_m_c_for_all_sensors();
+  ADS1115_init();
 }
 
 void loop() {
@@ -60,6 +64,24 @@ void sendCommands() {
   }
   
 }
+float OOM202_GetOxygenPercentage(void)
+{
+  float O2Percentage=0;
+  float SensorVolt;
+  SensorVolt=ADC_ReadVolageOnATMega2560(OXYGEN_ANALOG_PIN);
+  O2Percentage = get_o2_percentage(SensorVolt);
+  return(O2Percentage);
+}
+
+float PS_GetPressureValue(int Channel)
+{
+  float Pressure=0.0;
+  float SensorVolt;
+  SensorVolt = ADS1115_ReadVolageOverI2C(Channel);
+  Pressure = get_pressure_value(SensorVolt, Channel);
+  return(Pressure);
+}
+
 void announce() {
   if (announced == 0) {
     listDisplayMode();

@@ -12,7 +12,8 @@
 #define EEPROM_I2C_ADDR 0x50
 #define EEPROM_BASE_ADDR 0x64
 
-const uint32_t totalKBytes = 64;
+//const uint32_t totalKBytes = 64;
+
 
 extEEPROM hbad_mem(kbits_256, 1, 32, EEPROM_I2C_ADDR);
 
