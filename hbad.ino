@@ -5,6 +5,7 @@ static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 #include "pinout.h"
 #include "ctrl_display.h"
 #include "lcd.h"
+#include "hbad_serial.h"
 #include "hbad_memory.h"
 
 volatile int currPos = 1;
@@ -110,11 +111,11 @@ void showSelectedParam() {
     lcd.setCursor(10, 1);
     sprintf(paddedValue, "%4d", params[currPos - 1].value_new_pot);
     lcd.print(paddedValue);
-    float actualValue = getActualParamValue(params[currPos - 1].value_new_pot, currPos - 1);
+    float actualValue = getCalibValue(params[currPos - 1].value_new_pot, currPos - 1);
     lcd.setCursor(10, 2);
     lcd.print(actualValue,2);
     lcd.setCursor(10, 3);
-    float storedValue = getActualParamValue(params[currPos - 1].value_curr_mem, currPos - 1);
+    float storedValue = getCalibValue(params[currPos - 1].value_curr_mem, currPos - 1);
     lcd.print(storedValue);
     delay(mode_loop_delays[switchMode]);
   }
@@ -144,13 +145,16 @@ void isr_processStartEdit() {
   lastSwitchTime = switchTime;
 }
 
-float getActualParamValue(int potValue, int paramIndex){
+float getCalibValue(int potValue, int paramIndex){
   float convVal = map(potValue, 0,POT_HIGH, param_range_min[paramIndex], param_range_max[paramIndex]);
-//  int quot = convVal / param_incr[paramIndex];
-//  return param_incr[paramIndex] * quot;
   return ((int)(convVal / param_incr[paramIndex]) + 1) * param_incr[paramIndex];
-//  Serial.print("Conv value\t");
-//  Serial.println(convVal);
-//  Serial.print("floored\t");
-//  Serial.println(retVal);
+}
+
+/*
+ * The below method is for a specific parameter
+ */
+float getCalibratedParam(ctrl_parameter_t param){
+  unsigned short paramIdx = param.index - 1;
+  float convVal = map(param.value_curr_mem, 0,POT_HIGH, param.min_val, param.max_val);
+  return ((int)(convVal / param_incr[paramIdx]) + 1) * param_incr[paramIdx];
 }
