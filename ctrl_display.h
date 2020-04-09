@@ -28,10 +28,10 @@ static const int mode_timeouts[] = {0, 0, 500, 0};
 static const char CFG_INDICATOR ((char) 162);
 
 static const String mode_headers[] = {"PRESS SELECT TO EDIT", "TURN KNOB TO SELECT", "TURN POT TO SETECT", "PRESS SELECT TO SAVE"};
-String param_names[] = {"Tidal Volu", "Resp Rate", "Peak Press", "IER", "PEEP", "FiO2", };
-String param_units[] = {"ml", "bpm", "cmH2o", "#", "cmH2o", "%"};
-int param_range_min[] = {150, 6, 37, 0, 5, 21};
-int param_range_max[] = {800, 35, 60, 3, 20, 100};
+String param_names[] = {"Tidal Volu", "Resp Rate", "Peak Press", "IER", "PEEP", "FiO2", "PS1", "PS2"};
+String param_units[] = {"ml", "bpm", "cmH2o", "#", "cmH2o", "%", "mmH2o", "mmH2o"};
+int param_range_min[] = {150, 6, 37, 0, 5, 21, -1, -1};
+int param_range_max[] = {800, 35, 60, 3, 20, 100, -1, -1};
 int param_incr[] = {50, 1, 1, 1, 20, -1};
 struct ctrl_parameter_t {
   unsigned short index;
@@ -77,7 +77,7 @@ const ctrl_parameter_t peep_pres =    {5, param_names[4],
                                        param_range_min[4],
                                        param_range_max[4],
                                        param_units[4],
-                                       PARAM_TYPE_SENS,
+                                       PARAM_TYPE_UCFG,
                                        0, 0, 0
                                       };
 
@@ -85,8 +85,22 @@ const ctrl_parameter_t fio2_perc =    {6, param_names[5],
                                        param_range_min[5],
                                        param_range_max[5],
                                        param_units[5],
-                                       PARAM_TYPE_SENS,
+                                       PARAM_TYPE_UCFG,
                                        0, 0, 0
                                       };
 
-static ctrl_parameter_t params[] = {tidl_volu, resp_rate, peak_press, inex_rati, peep_pres, fio2_perc};
+const ctrl_parameter_t ps1_sense =    {7, param_names[6],
+                                       param_range_min[6],
+                                       param_range_max[6],
+                                       param_units[6],
+                                       PARAM_TYPE_UCFG,
+                                       0, 0, 0
+                                      };
+const ctrl_parameter_t ps2_sense =    {8, param_names[7],
+                                       param_range_min[7],
+                                       param_range_max[7],
+                                       param_units[7],
+                                       PARAM_TYPE_UCFG,
+                                       0, 0, 0
+                                      };
+static ctrl_parameter_t params[] = {tidl_volu, resp_rate, peak_press, inex_rati, peep_pres, fio2_perc, ps1_sense, ps2_sense};

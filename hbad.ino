@@ -1,7 +1,6 @@
 static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 
 #include <Encoder.h>
-#include <Streaming.h>
 #include <Wire.h>
 #include "pinout.h"
 #include "ctrl_display.h"
@@ -19,6 +18,7 @@ void setup() {
   pinMode(DISP_ENC_DT, INPUT);
   pinMode(DISP_ENC_SW, INPUT_PULLUP);
   lcd.begin(LCD_LENGTH_CHAR, LCD_HEIGHT_CHAR);
+  hbad_mem.begin();
   Wire.setClock(4000000L);
   Wire.begin();
   Serial.begin(9600);
@@ -122,60 +122,14 @@ void showSelectedParam() {
 
 void saveSelectedParam() {
   if (switchMode == PAR_SAVE_MODE) {
-    Serial.print("Saving..");
     storeParam(params[currPos - 1]);
+    Serial.print("abcdef ");
+    Serial.println(switchMode);
     lcd.setCursor(0, 4);
     lcd.print(params[currPos - 1].parm_name);
-    /*
-      int address = sizeof(params[currPos - 1].value_curr_mem) * currPos;
-       Though the above code is generic, for simplicity of the code below,
-       We are assuming four hytes here.
-       https://learn.sparkfun.com/tutorials/reading-and-writing-serial-eeproms/all
-    */
-    /*
-           Wire.beginTransmission(EEPROM_I2C_ADDR);
-      int currentMemBegin = EEPROM_BASE_ADDR + (currPos - 1) * 4;
-      Wire.write(currentMemBegin & 0xFF);
-      Wire.write(currentMemBegin >> 8);
-      Wire.write(params[currPos - 1].value_new_pot);
-        Serial.print("Actual value:\t");
-        Serial.println(params[currPos - 1].value_new_pot);
-        Serial.print("in up:\t");
-        Serial.println(params[currPos - 1].value_new_pot >> 8);
-        Serial.print("in low:\t");
-        Serial.println(params[currPos - 1].value_new_pot & 0xFF);
-    */
-//    unsigned short saveFlag = Wire.endTransmission();
-      int saveFlag = 0;
-    if (saveFlag == 0) {
-      lcd.setCursor(14, 3);
-      lcd.print(" saved");
-    } else {
-      lcd.setCursor(14, 3);
-      lcd.print(" Error!!");
-    }
-    delay(500);
     switchMode = DISPLAY_MODE;
     actionPending = 0;
   }
-}
-
-int getParamValFrmMem(int paramIdx) {
-  int currentMemBegin = EEPROM_BASE_ADDR + paramIdx * 4;
-  Wire.beginTransmission(EEPROM_I2C_ADDR);
-  Wire.write(currentMemBegin & 0xFF);
-  Wire.write(currentMemBegin >> 8);
-  Wire.endTransmission();
-  Wire.requestFrom(EEPROM_I2C_ADDR, 2);
-  delay(10);
-  byte memByte = Wire.read();
-  Serial.print("UB:\t");
-  Serial.println(memByte);
-  int sensorReading = memByte << 8;
-  memByte = Wire.read();
-  Serial.print("LB:\t");
-  Serial.println(memByte);
-  return sensorReading;
 }
 
 void isr_processStartEdit() {
@@ -185,7 +139,6 @@ void isr_processStartEdit() {
     return;
   }
   switchMode = (switchMode + 1) % 4;
-  Serial.println(switchMode);
   announced = 0;
   actionPending = 1;
   lastSwitchTime = switchTime;
