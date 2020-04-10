@@ -9,6 +9,7 @@ Adafruit_ADS1115 ads;
 const int OxygenAnalog = A0;  // Analog input pin that the potentiometer is attached to
 const int PotValue = A1;  // Analog input pin that the potentiometer is attached to
 const int MaxAdcSamples = 10;
+int ADCSampleBuff[MaxAdcSamples]= {0};
 
 float OxygenFianlAnalog;
 const int ADCRefVolt = 5;
@@ -73,7 +74,6 @@ ads.begin();
 float ADS1115_ReadVolageOverI2C(int Channel)
 {
   int ADCCount, AvgSampleCount;
-  int ADCSampleBuff[MaxAdcSamples]= {0};
   float Avg10Samples;
   float SumValue= 0.0, ADCThresH=0.0, ADCThresL=0.0;
   float PressSensorVolts=0.0;
@@ -98,7 +98,6 @@ float ADS1115_ReadVolageOverI2C(int Channel)
 float ADC_ReadVolageOnATMega2560(int Channel)
 {
   int ADCCount, AvgSampleCount;
-  int ADCSampleBuff[MaxAdcSamples]= {0};
   float Avg10Samples;
   float SumValue= 0.0, ADCThresH=0.0, ADCThresL=0.0;
   float OxygenSensorVolts=0.0;
@@ -119,29 +118,7 @@ float ADC_ReadVolageOnATMega2560(int Channel)
   return(OxygenSensorVolts);
 }
 
-float ReadOxygenSensorAnalogVolts(void)
-{
-  int ADCCount, AvgSampleCount;
-  int ADCSampleBuff[MaxAdcSamples]= {0};
-  float Avg10Samples;
-  float SumValue= 0.0, ADCThresH=0.0, ADCThresL=0.0;
-  float OxygenSensorVolts=0.0;
-  for(int i=0; i<MaxAdcSamples; i++)
-  {
-    ADCSampleBuff[i] = analogRead(OxygenAnalog);
-    #if SERIAL_PRINTS
-    Serial.print(ADCSampleBuff[i]);
-    Serial.print(" ");
-    #endif
-  }
-  OxygenSensorVolts = ADC_ApplyAvgFilter(ADCSampleBuff, MaxAdcSamples, O2SensMultiplier);
-  #if SERIAL_PRINTS
-  Serial.print("Oxygen ADC Value= ");
-  Serial.println(OxygenSensorVolts);
-  #endif
 
-  return(OxygenSensorVolts);
-}
  
 float ADC_ApplyAvgFilter(int *SampleBuf, int SampleCount, float Multiplier)
 {

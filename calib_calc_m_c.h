@@ -4,7 +4,7 @@
 #include "hbad_memory.h"
 #include "ventilator_sensors.h"
 
-#define AVOID_EEPROM 1
+#define AVOID_EEPROM 0
 #define DEBUG_PRINTS 0
 
 //global data
@@ -228,8 +228,7 @@ float get_pressure_value(float y_voltage, int channel)
   switch(channel)
   {
     case PS1:
-      x = getX(y_voltage/10,m_pg1,c_pg1);
-      //Serial.print(y_voltage/10,3);Serial.print(" PG1 = ");Serial.println(x,3);
+      x = getX(y_voltage,m_pg1,c_pg1);
       break;
     case PS2:
       x = getX(y_voltage,m_pg2,c_pg2);
