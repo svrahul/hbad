@@ -10,6 +10,7 @@ static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 #include "calib_calc_m_c.h"
 #include "sensor_params.h"
 #include "sensor_read.h"
+#include "Diagnostics.h"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -34,6 +35,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
 
   setup_calib_calc_m_c();
+  if(digitalRead(DISP_ENC_SW))
+  {
+    Diagnostics_Mode();
+  }
 }
 
 void loop() {
