@@ -29,11 +29,19 @@ float Pressure;
 #define OXYGEN_SET_ANA_PIN  A1
 
 /*ADS115 ADC Channel Assignments */
-#define PS1 0
-#define PS2 1
-#define DPS1  2
-#define DPS2  3
+//#define PS1 0
+//#define PS2 1
+//#define DPS1  2
+//#define DPS2  3
 
+#define NUM_OF_SENSORS 5
+typedef enum{
+  PS1,
+  PS2,
+  DPS1,
+  DPS2,
+  O2,
+}sensor_e;
 
 float ADC_ReadVolageOnATMega2560(int Channel);
 float ADS1115_ReadVolageOverI2C(int Channel);

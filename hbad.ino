@@ -30,9 +30,8 @@ void setup() {
   Wire.begin();
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
+
   setup_calib_calc_m_c();
-  calc_m_c_for_all_sensors();
-  ADS1115_init();
 }
 
 void loop() {
@@ -44,8 +43,11 @@ void loop() {
   if (actionPending) {
     delay(2000);
   }
-  OOM202_GetOxygenPercentage();
-  PS_GetPressureValue(PS1);
+  Serial.println(PS_ReadSensorValueX10(PS1));
+  Serial.println(PS_ReadSensorValueX10(PS2));
+  Serial.println(PS_ReadSensorValueX10(DPS1));
+  Serial.println(PS_ReadSensorValueX10(DPS2));
+  Serial.println(PS_ReadSensorValueX10(O2));
 }
 void sendCommands() {
   String oprName="P";
@@ -66,22 +68,27 @@ void sendCommands() {
   }
   
 }
-float OOM202_GetOxygenPercentage(void)
+
+int PS_ReadSensorMilliVolt(int Channel)
 {
-  float O2Percentage=0;
   float SensorVolt;
-  SensorVolt=ADC_ReadVolageOnATMega2560(OXYGEN_ANALOG_PIN);
-  O2Percentage = get_o2_percentage(SensorVolt);
-  return(O2Percentage);
+  if (Channel == O2)
+  {
+    SensorVolt=ADC_ReadVolageOnATMega2560(OXYGEN_ANALOG_PIN);
+  }
+  else
+  {
+    SensorVolt = ADS1115_ReadVolageOverI2C(Channel);
+  }
+  return(int(SensorVolt*1000));
 }
 
-float PS_GetPressureValue(int Channel)
+int PS_ReadSensorValueX10(int Channel)
 {
-  float Pressure=0.0;
-  float SensorVolt;
-  SensorVolt = ADS1115_ReadVolageOverI2C(Channel);
-  Pressure = get_pressure_value(SensorVolt, Channel);
-  return(Pressure);
+  int Pressurex10,SensorMilliVolt;
+  SensorMilliVolt = PS_ReadSensorMilliVolt(Channel);
+  Pressurex10 = getSensorUnitsx10(Channel, SensorMilliVolt);
+  return(Pressurex10);
 }
 
 void announce() {
