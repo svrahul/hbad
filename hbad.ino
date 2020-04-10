@@ -57,11 +57,16 @@ void loop() {
   Serial.println(PS_ReadSensorValueX10(DPS2));
   Serial.println(PS_ReadSensorValueX10(O2));
   //Sample test
-  Serial.println(get_PS1(sample).current_val);
-  Serial.println(get_PS2(sample).current_val);
-  Serial.println(get_FiO2(sample).current_val);
-  Serial.println(get_DPS1(sample).current_val);
-  Serial.println(get_DPS2(sample).current_val);
+  get_PS1(&sample);
+  Serial.println(sample.current_val);
+  get_PS2(&sample);
+  Serial.println(sample.current_val);
+  get_FiO2(&sample);
+  Serial.println(sample.current_val);
+  get_DPS1(&sample);
+  Serial.println(sample.current_val);
+  get_DPS2(&sample);
+  Serial.println(sample.current_val);
 }
 void sendCommands() {
   String oprName="P";
