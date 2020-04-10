@@ -22,7 +22,7 @@ int O2Percentage;
 float Pressure;
 
 /*Debug prints enable */
-#define SERIAL_PRINTS 1
+#define SERIAL_PRINTS 0
 
 #define OXYGEN_ANALOG_PIN   A0
 #define OXYGEN_SET_ANA_PIN  A1

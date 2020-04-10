@@ -44,6 +44,8 @@ void loop() {
   if (actionPending) {
     delay(2000);
   }
+  OOM202_GetOxygenPercentage();
+  PS_GetPressureValue(PS1);
 }
 void sendCommands() {
   String oprName="P";

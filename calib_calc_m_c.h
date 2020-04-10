@@ -1,24 +1,31 @@
 
-//#include <EEPROM.h>
+
+
 #include "hbad_memory.h"
 #include "ventilator_sensors.h"
 
-
-//extern extEEPROM hbad_mem(kbits_256, 1, 32, EEPROM_I2C_ADDR);
+#define AVOID_EEPROM 1
+#define DEBUG_PRINTS 0
 
 //global data
 //slope(m) and constant(c) for all the sensors.
+#define numOfSamples_o2 5
+#define numOfSamples_pg1 19
 float m_o2, c_o2, m_pg1, c_pg1, m_pg2, c_pg2, m_dpg1, c_dpg1, m_dpg2, c_dpg2;
-boolean addr_default_data_write_to_eeprom_on_first_program_load = 10;
+
+#if AVOID_EEPROM
+boolean addr_default_data_write_to_eeprom_on_first_program_load[1];
+int addr_o2_y_data[numOfSamples_o2];
+int addr_pg1_y_data[numOfSamples_pg1];
+#else
+boolean * addr_default_data_write_to_eeprom_on_first_program_load = 10;
 int * addr_o2_y_data = 12;
 int * addr_pg1_y_data = 50;
+#endif
 
-unsigned int numOfSamples_o2 = 5;
-unsigned int numOfSamples_pg1 = 19;
 
 
 //control flags
-boolean debug_prints = false;
 boolean execute_cal = true;
 boolean execute_get_val = true;
 
@@ -27,18 +34,19 @@ boolean execute_get_val = true;
  * function declarations
  */
 void write_to_eeprom(unsigned int numOfIntWrites, int * addr, int *val);
-//void calib_calculate_m_c(int numOfSamples, float *x_val, char * addr, float *m, float *c);
-//float getY(float);
-//float getX(float);
+void calib_calculate_m_c(unsigned int numOfSamples, float *x_val, int * addr, float *m, float *c);
 
 
 void setup_calib_calc_m_c() {
   // put your setup code here, to run once:
   ctrl_parameter_t param;
-  //Serial.begin(9600);
-  //Serial.println("starting!");
+  Serial.println("starting calib_calc_m_c setup!");
   param.index = addr_default_data_write_to_eeprom_on_first_program_load;
+  #if AVOID_EEPROM
+  param.value_new_pot = true;
+  #else
   retrieveParam(param);
+  #endif
   boolean default_data_write_to_eeprom_on_first_program_load = param.value_new_pot;
   if (default_data_write_to_eeprom_on_first_program_load)
   {
@@ -48,11 +56,17 @@ void setup_calib_calc_m_c() {
     unsigned int int_y_o2[] = {377, 1088, 1750, 2110, 4812};
     unsigned int int_y_pg2[] = {200, 220, 240, 260, 280, 300, 320, 330, 350, 370, 390, 410, 430, 450, 470, 490, 500, 520, 540};
     
-    write_to_eeprom(numOfSamples_o2*2, addr_o2_y_data, int_y_o2);
-    write_to_eeprom(numOfSamples_pg1*2, addr_pg1_y_data, int_y_pg2);
+    write_to_eeprom(numOfSamples_o2, addr_o2_y_data, int_y_o2);
+    write_to_eeprom(numOfSamples_pg1, addr_pg1_y_data, int_y_pg2);
     param.value_new_pot = false;
+    #if AVOID_EEPROM
+    *(addr_default_data_write_to_eeprom_on_first_program_load)=param.value_new_pot;
+    #else
     storeParam(param);
+    Serial.println("Default data written to EEPROM");
+    #endif
   }
+  Serial.println("Done calib_calc_m_c setup!");
 }
 
 /*
@@ -67,24 +81,26 @@ void calib_calculate_m_c(unsigned int numOfSamples, float *x_val, int * addr, fl
   ctrl_parameter_t param;
   unsigned int index;
   unsigned char value1, value2;
-  Serial.println("printing values from addr");
   for (index = 0; index < numOfSamples; index++)
   {
+#if AVOID_EEPROM
+    //value1 = *addr;
+    //addr+=1;
+    //value2 = *addr;
+    //y_val = ((float)((value2<<8)+(value1)))/1000;
+    y_val = ((float)(*addr))/1000;
+#else
     param.index = addr;
     retrieveParam(param);
     y_val = ((float)param.value_new_pot)/1000;
-    //value1 = EEPROM.read(addr);
-    //addr+=1;
-    //value2 = EEPROM.read(addr);
-    //y_val = ((float)((value2<<8)+(value1)))/1000;
+#endif
     addr+=1;
     
-    if (debug_prints)
-    {
+    #if DEBUG_PRINTS
       Serial.print("addr ");Serial.print((int)addr, HEX);Serial.print(" = ");
       //Serial.print(value2, DEC); Serial.print(" "); Serial.print(value1, DEC);
       Serial.print(" = in float "); Serial.println(y_val,5);
-    }
+    #endif
     sigmaX += x_val[index];
     sigmaY += y_val;
     sigmaXX += x_val[index]*x_val[index];
@@ -115,12 +131,23 @@ void calc_m_c_for_all_sensors()
 {
     float const x_o2[numOfSamples_o2] = {0, 21.6, 28, 40, 100};
     float const x_pg1[numOfSamples_pg1] = {5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95};
-
+    Serial.println("starting calc_m_c_for_all_sensors!");
+    
     calib_calculate_m_c(numOfSamples_o2, x_o2, addr_o2_y_data, &m_o2, &c_o2);
+    Serial.print("computed m O2:"); Serial.print(m_o2,5);Serial.print(",  computed c O2:");Serial.println(c_o2,5);
+    
     calib_calculate_m_c(numOfSamples_pg1, x_pg1, addr_pg1_y_data, &m_pg1, &c_pg1);
+    Serial.print("computed m PG1:");Serial.print(m_pg1,5);Serial.print(",  computed c PG1:");Serial.println(c_pg1,5);
+    
     //calib_calculate_m_c(numOfSamples_pg2, x_pg1, y_pg2, &m_pg2, &c_pg2);
+    //Serial.print("computed m PG2:");Serial.print(m_pg2,5);Serial.print(",  computed c PG2:");Serial.println(c_pg2,5);
+    
     //calib_calculate_m_c(numOfSamples_dpg1, x_dpg, y_dpg1, &m_dpg1, &c_dpg1);
+    //Serial.print("computed m DPG1:");Serial.print(m_dpg1,5);Serial.print(",  computed c DPG1:");Serial.println(c_dpg1,5);
+    
     //calib_calculate_m_c(numOfSamples_dpg2, x_dpg, y_dpg2, &m_dpg2, &c_dpg2);
+    //Serial.print("computed m DPG2:");Serial.print(m_dpg2,5);Serial.print(",  computed c DPG2:");Serial.println(c_dpg2,5);
+    Serial.println("Done calc_m_c_for_all_sensors!");
 }
 
 /*
@@ -148,69 +175,77 @@ float getY(float x, float m, float c)
   return y;
 }
 
-float get_o2_voltage(float y_percentage)
+float get_o2_voltage(float x_percentage)
 {
-  float x;
-  x = getX(y_percentage,m_o2,c_o2);
-  return x;
+  float y;
+  y = getY(x_percentage,m_o2,c_o2);
+  Serial.print(x_percentage,3);Serial.print("% of oxygen= ");Serial.print(y,3);Serial.println("V.");
+  return y;
 }
 
-float get_pressure_voltage(float y_unit, int channel)
+float get_pressure_voltage(float x_unit, int channel)
 {
-  float x;
+  float y;
   switch(channel)
   {
     case PS1:
-      x = getX(y_unit,m_pg1,c_pg1);
+      y = getY(x_unit,m_pg1,c_pg1);
       break;
     case PS2:
-      x = getX(y_unit,m_pg2,c_pg2);
+      y = getY(x_unit,m_pg2,c_pg2);
       break;
     case DPS1:
-      x = getX(y_unit,m_dpg1,c_dpg1);
+      y = getY(x_unit,m_dpg1,c_dpg1);
       break;
     case DPS2:
-      x = getX(y_unit,m_dpg2,c_dpg2);
+      y = getY(x_unit,m_dpg2,c_dpg2);
       break;
     default:
       break;      
   }
-  return x;
+  Serial.print("channel:");Serial.print(channel);Serial.print(": ");Serial.print(x_unit,3);
+  Serial.print("V = ");Serial.print(y,3);Serial.println(".");
+  return y;
 }
 
 /*
  * get o2 percentage in float for given voltage reading of o2 sensor
  */
-float get_o2_percentage(float x_voltage)
+float get_o2_percentage(float y_voltage)
 {
-  float y;
-  y = getY(x_voltage,m_o2,c_o2);
-  return y;
+  float x;
+  x = getX(y_voltage,m_o2,c_o2);
+  Serial.print(y_voltage,3);Serial.print("V = ");Serial.print(x);
+  Serial.println("% of oxygen.");
+  return x;
 }
 /*
  * get pg1 units in float for given voltage reading of pg1 sensor
  */
-float get_pressure_value(float x_voltage, int channel)
+float get_pressure_value(float y_voltage, int channel)
 {
-  float y;
+  float x;
   switch(channel)
   {
     case PS1:
-      y = getY(x_voltage,m_pg1,c_pg1);
+      x = getX(y_voltage/10,m_pg1,c_pg1);
+      //Serial.print(y_voltage/10,3);Serial.print(" PG1 = ");Serial.println(x,3);
       break;
     case PS2:
-      y = getY(x_voltage,m_pg2,c_pg2);
+      x = getX(y_voltage,m_pg2,c_pg2);
       break;
     case DPS1:
-      y = getY(x_voltage,m_dpg1,c_dpg1);
+      x = getX(y_voltage,m_dpg1,c_dpg1);
       break;
     case DPS2:
-      y = getY(x_voltage,m_dpg2,c_dpg2);
+      x = getX(y_voltage,m_dpg2,c_dpg2);
       break;
     default:
       break;      
   }
-  return y;
+  Serial.print("channel:");Serial.print(channel);Serial.print(", ");
+  Serial.print(y_voltage,3);Serial.print("V = ");Serial.print(x,3);Serial.println(".");
+  return x;
 }
 
 
@@ -223,12 +258,15 @@ void write_to_eeprom(unsigned int numOfIntWrites, int * addr, int *val)
   {
     param.value_new_pot = *val;
     param.index = addr;
+    #if AVOID_EEPROM
+    *addr = *val;
+    #else
     storeParam(param);
+    #endif
     //EEPROM.write(addr, *val);
-    if (debug_prints)
-    {
+    #if DEBUG_PRINTS
       Serial.print("addr "); Serial.print((int)addr, HEX);Serial.print(" = ");Serial.print(*val, DEC);Serial.println(".");
-    }
+    #endif
     addr++;
     val++;
   }
@@ -243,11 +281,11 @@ void test_loop_calib_calc_m_c() {
     execute_cal=false;
     // calibrate o2 data
     //get o2 y data from eeprom
-    calib_calculate_m_c(numOfSamples_o2, x_o2, addr_o2_y_data, &m_o2, &c_o2);
+    //calib_calculate_m_c(numOfSamples_o2, x_o2, addr_o2_y_data, &m_o2, &c_o2);
     //calibrate pg1 data
   
   
-    calib_calculate_m_c(numOfSamples_pg1, x_pg1, addr_pg1_y_data, &m_pg1, &c_pg1);
+    //calib_calculate_m_c(numOfSamples_pg1, x_pg1, addr_pg1_y_data, &m_pg1, &c_pg1);
     
     //calibrate pg2 data
     //calib_calculate_m_c(numOfSamples_pg2, x_pg1, y_pg2, &m_pg2, &c_pg2);
@@ -257,8 +295,7 @@ void test_loop_calib_calc_m_c() {
     
     //calibrate dpg1 data
     //calib_calculate_m_c(numOfSamples_dpg2, x_dpg, y_dpg2, &m_dpg2, &c_dpg2);
-    //if (debug_prints)
-    {
+    #if DEBUG_PRINTS
       Serial.print("computed m O2:");
       Serial.print(m_o2,5);
       Serial.print(",  computed c O2:");
@@ -269,7 +306,7 @@ void test_loop_calib_calc_m_c() {
       Serial.print(",  computed c PG1:");
       Serial.print(c_pg1,5);
       Serial.println(".");
-    }
+    #endif
   }
   if (execute_get_val)
   {
@@ -278,16 +315,16 @@ void test_loop_calib_calc_m_c() {
     Serial.println("for X:     \t Y");
     for (x=0.0; x<100; x+=10)
     {
-      y = getY(x,m_o2,c_o2);
+      y = getY(x,m_pg1,c_pg1);
       Serial.print(x,5);
       Serial.print(":\t");
       Serial.println(y,5);
     }
   
     Serial.println("for Y:     \t X");
-    for (y=0.0; y<5; y+=0.5)
+    for (y=0.0; y<0.5; y+=0.05)
     {
-      x = getX(y,m_o2,c_o2);
+      x = getX(y,m_pg1,c_pg1);
       Serial.print(y,5);
       Serial.print(":\t");
       Serial.println(x,5);
