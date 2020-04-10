@@ -335,3 +335,25 @@ void test_loop_calib_calc_m_c() {
     }
   }
 }
+
+int PS_ReadSensorMilliVolt(int Channel)
+{
+  float SensorVolt;
+  if (Channel == O2)
+  {
+    SensorVolt=ADC_ReadVolageOnATMega2560(OXYGEN_ANALOG_PIN);
+  }
+  else
+  {
+    SensorVolt = ADS1115_ReadVolageOverI2C(Channel);
+  }
+  return(int(SensorVolt*1000));
+}
+
+int PS_ReadSensorValueX10(int Channel)
+{
+  int Pressurex10,SensorMilliVolt;
+  SensorMilliVolt = PS_ReadSensorMilliVolt(Channel);
+  Pressurex10 = getSensorUnitsx10(Channel, SensorMilliVolt);
+  return(Pressurex10);
+}

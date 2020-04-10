@@ -8,6 +8,8 @@ static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 #include "hbad_serial.h"
 //#include "hbad_memory.h"
 #include "calib_calc_m_c.h"
+#include "sensor_params.h"
+#include "sensor_read.h"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -43,11 +45,18 @@ void loop() {
   if (actionPending) {
     delay(2000);
   }
+  sensor_parameter_t sample;
   Serial.println(PS_ReadSensorValueX10(PS1));
   Serial.println(PS_ReadSensorValueX10(PS2));
   Serial.println(PS_ReadSensorValueX10(DPS1));
   Serial.println(PS_ReadSensorValueX10(DPS2));
   Serial.println(PS_ReadSensorValueX10(O2));
+  //Sample test
+  Serial.println(get_PS1(sample).current_val);
+  Serial.println(get_PS2(sample).current_val);
+  Serial.println(get_FiO2(sample).current_val);
+  Serial.println(get_DPS1(sample).current_val);
+  Serial.println(get_DPS2(sample).current_val);
 }
 void sendCommands() {
   String oprName="P";
@@ -69,27 +78,7 @@ void sendCommands() {
   
 }
 
-int PS_ReadSensorMilliVolt(int Channel)
-{
-  float SensorVolt;
-  if (Channel == O2)
-  {
-    SensorVolt=ADC_ReadVolageOnATMega2560(OXYGEN_ANALOG_PIN);
-  }
-  else
-  {
-    SensorVolt = ADS1115_ReadVolageOverI2C(Channel);
-  }
-  return(int(SensorVolt*1000));
-}
 
-int PS_ReadSensorValueX10(int Channel)
-{
-  int Pressurex10,SensorMilliVolt;
-  SensorMilliVolt = PS_ReadSensorMilliVolt(Channel);
-  Pressurex10 = getSensorUnitsx10(Channel, SensorMilliVolt);
-  return(Pressurex10);
-}
 
 void announce() {
   if (announced == 0) {

@@ -10,19 +10,19 @@ struct sensor_parameter_t {
   int channel_num;
 };
 
-const sensor_parameter_t ps1_sense =    {1, "PS1",
+const sensor_parameter_t ps_sense1 = {1, "PS1",
                                        -1,
                                        -1,
                                        "mV",
                                         0
                                       };
-const sensor_parameter_t ps2_sense =    {2, "PS2",
+const sensor_parameter_t ps_sense2 =    {2, "PS2",
                                        -1,
                                        -1,
                                        "mV",
                                         1
                                       };
-const sensor_parameter_t fio2_sense =   {3, "FiO2",
+const sensor_parameter_t fio_sense =   {3, "FiO2",
                                        0,
                                        0,
                                        "%",
@@ -40,4 +40,4 @@ const sensor_parameter_t dps2_sense =   {5, "DPS2",
                                        "mV",
                                        0
                                       };
-static sensor_parameter_t sensor_params[] = {ps1_sense, ps2_sense, fio2_sense,dps1_sense, dps2_sense};
+static sensor_parameter_t sensor_params[] = {ps_sense1, ps_sense2, fio_sense,dps1_sense, dps2_sense};
