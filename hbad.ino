@@ -16,9 +16,18 @@ unsigned short newPeep = 5;
 int ctrlParamChangeInit = 0;
 volatile int switchMode = 0;
 volatile static short announced = 0;
-volatile boolean actionPending = true;
-boolean ierSelect = false;
-boolean peepSelect = false;
+volatile boolean actionPending = false;
+static int encoderBasedParam = -1;
+int lastCLK = 0;
+boolean currPosChanged = 0;
+#define ROT_ENC_FOR_IER (encoderBasedParam == inex_rati.index)
+#define ROT_ENC_FOR_PEEP (encoderBasedParam == peep_pres.index)
+
+#define READ_FROM_ENCODER ((switchMode == PAR_SELECTED_MODE) \
+                           && (encoderBasedParam >=0 && (encoderBasedParam < MAX_CTRL_PARAMS) \
+                               && (params[encoderBasedParam].readPortNum == DISP_ENC_CLK)))
+
+
 void setup() {
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
@@ -32,33 +41,36 @@ void setup() {
 }
 
 void loop() {
-  sendCommands();
+  //  sendCommands();
   announce();
+  //  Serial.println("currPos before\t");
+  //  Serial.println(currPos);
   processRotation();
+  //  Serial.println("currPos after\t");
+  //  Serial.println(currPos);
   showSelectedParam();
   saveSelectedParam();
-  if (actionPending) {
+  if (!actionPending) {
     delay(2000);
   }
 }
 void sendCommands() {
-  String oprName="P";
+  String oprName = "P";
   String command;
   char paddedValue[3];
-  int size = sizeof(params)/sizeof(params[0]);
-  for(int i=0;i<size-2;i++){
-   // padding(params[i].value_curr_mem, 4 );
-   command = START_DELIM;
-   command +=VENT_MAST;
-   command += oprName + i;
-     sprintf(paddedValue, "%04d",
-        params[i].value_curr_mem);
-   command += paddedValue;
-   command += END_DELIM;
-   Serial.println(command);
-   delay(3000);
+  for (int i = 0; i < MAX_CTRL_PARAMS - 2; i++) {
+    // padding(params[i].value_curr_mem, 4 );
+    command = START_DELIM;
+    command += VENT_MAST;
+    command += oprName + i;
+    sprintf(paddedValue, "%04d",
+            params[i].value_curr_mem);
+    command += paddedValue;
+    command += END_DELIM;
+    Serial.println(command);
+    delay(3000);
   }
-  
+
 }
 void announce() {
   if (announced == 0) {
@@ -68,102 +80,103 @@ void announce() {
 }
 
 void listDisplayMode() {
-  Serial.print("switchMode\t");
-  Serial.println(switchMode);
   if (switchMode == DISPLAY_MODE) {
+    lcd.setCursor(0, 0);
+    lcd.print(mode_headers[switchMode]);
     unsigned int nextLine = 1;
-    for (int i = 0; i < MAX_CTRL_PARAMS; i++) {
-      if (i % 3 == 0) {
-        lcd.setCursor(0, 0);
-        lcd.print(mode_headers[switchMode]);
-        nextLine = 1;
-      }
-      cleanRow(nextLine);
-      lcd.setCursor(0, nextLine);
+    for (int i = 0; i < MAX_CTRL_PARAMS; i += 2) {
+      lcd.setCursor(NAME1_DISPLAY_POS, nextLine);
       lcd.print(params[i].parm_name);
-      lcd.setCursor(14, nextLine);
+      lcd.setCursor(VALUE1_DISPLAY_POS, nextLine);
       lcd.print(getCalibratedParam(params[i]));
+      lcd.print(" ");
+      lcd.print(PAR_SEP_CHAR);
+      lcd.setCursor(NAME2_DISPLAY_POS, nextLine);
+      lcd.print(params[i + 1].parm_name);
+      lcd.setCursor(VALUE2_DISPLAY_POS, nextLine);
+      lcd.print(getCalibratedParam(params[i + 1]));
       nextLine++;
-      if (nextLine > 3) {
-        delay(3000);
-      }
     }
   }
 }
 
 void editParameterMode() {
   if (switchMode == EDIT_MODE) {
-    lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(mode_headers[switchMode]);
+    for (int i = 2; i < LCD_HEIGHT_CHAR; i++) {
+      cleanRow(i);
+    }
   }
 }
 int processRotation() {
-  int lastCLK = digitalRead(DISP_ENC_CLK);
-  int cursorIndex = 0;
   /*Index_select loop*/
-  while (switchMode == EDIT_MODE || ierSelect || peepSelect) {
-    Serial.print("switchMode\t");
-    Serial.println(switchMode);
-    if (lastCLK == digitalRead(DISP_ENC_CLK)) {
-      continue;
+  int cursorIndex = 0;
+  unsigned long lastRotateTime = 0;
+  unsigned long rotateTime = millis();
+  unsigned short int retVal;
+  int currentStateCLK = digitalRead(DISP_ENC_CLK);
+  while (switchMode == EDIT_MODE || READ_FROM_ENCODER) {
+    if ((rotateTime - lastRotateTime) < DBNC_INTVL_ROT) {
+      return 0;
     }
-    if (lastCLK == 0 ) {
-      continue;
+    rotateTime = millis();
+    currentStateCLK = digitalRead(DISP_ENC_CLK);
+    if (currentStateCLK != lastCLK && currentStateCLK == 1) {
+      if (currentStateCLK != digitalRead(DISP_ENC_DT)) {
+        cursorIndex++;
+      } else  {
+        cursorIndex--;
+      }
+      currPos = rectifyBoundaries(currPos + cursorIndex, 0, MAX_CTRL_PARAMS - 1);
+      lcd.setCursor(NAME1_DISPLAY_POS, 1);
+      lcd.print(params[currPos].parm_name);
+      Serial.print("currPos\t");
+      Serial.print(params[currPos].parm_name);
+      Serial.println(currPos);
+      if (READ_FROM_ENCODER) {
+        if (ROT_ENC_FOR_IER) {
+          newIER = rectifyBoundaries(newIER + cursorIndex, inex_rati.min_val, inex_rati.max_val);
+          cleanRow(1);
+          lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+          lcd.print("1:");
+          lcd.print(newIER);
+          retVal = newIER;
+          params[inex_rati.index - 1].value_new_pot = newIER;
+        } else if (ROT_ENC_FOR_PEEP) {
+          newPeep = rectifyBoundaries(newPeep + cursorIndex * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
+          lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+          lcd.print(newPeep);
+          retVal = newPeep;
+          params[peep_pres.index - 1].value_new_pot = newPeep;
+        }
+      }
     }
-    lcd.setCursor(0, 1);
-    lcd.print(params[currPos - 1].parm_name);
-    if (digitalRead(DISP_ENC_CLK) == digitalRead(DISP_ENC_DT)) {
-      cursorIndex--;
-    } else if (digitalRead(DISP_ENC_CLK) != digitalRead(DISP_ENC_DT)) {
-      cursorIndex++;
-    }
-    unsigned short int retVal;
-    if (ierSelect) {
-      newIER = rectifyBoundaries(newIER + cursorIndex, inex_rati.min_val, inex_rati.max_val);
-      cleanRow(1);
-      lcd.setCursor(10, 1);
-      lcd.print("1:");
-      lcd.print(newIER);
-      retVal = newIER;
-    } else if (peepSelect) {
-      newPeep = rectifyBoundaries(newPeep + cursorIndex * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
-      lcd.setCursor(10, 1);
-      lcd.print(newPeep);
-      retVal = newPeep;
-    } else {
-      currPos = currPos + cursorIndex;
-      currPos = rectifyBoundaries(currPos + cursorIndex, 0, MAX_CTRL_PARAMS);
-      cleanRow(1);
-      retVal = currPos;
-    }
-    delay(100);
-    return retVal;
+    retVal = currPos;
+    lastCLK = currentStateCLK;
+    lastRotateTime = rotateTime;
   }
-  return 0;
+  return retVal;
 }
 
 void showSelectedParam() {
   while (switchMode == PAR_SELECTED_MODE) {
-    lcd.setCursor(0, 1);
-    lcd.print(params[currPos - 1].parm_name);
-    if (currPos == inex_rati.index) {
-      ierSelect = true;
+    actionPending = true;
+    lcd.setCursor(NAME1_DISPLAY_POS, 1);
+    lcd.print(params[currPos].parm_name);
+    if (READ_FROM_ENCODER) {
+      encoderBasedParam = currPos;
       return;
     }
-    if (currPos == peep_pres.index) {
-      peepSelect = true;
-      return;
-    }
-    params[currPos - 1].value_new_pot = analogRead(analog_pins[currPos - 1]);
-    lcd.setCursor(10, 1);
-    sprintf(paddedValue, "%4d", params[currPos - 1].value_new_pot);
+    params[currPos].value_new_pot = params[currPos].readPortNum;
+    lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+    sprintf(paddedValue, "%4d", params[currPos].value_new_pot);
     lcd.print(paddedValue);
-    float actualValue = getCalibValue(params[currPos - 1].value_new_pot, currPos - 1);
-    lcd.setCursor(10, 2);
+    float actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
+    lcd.setCursor(VALUE1_DISPLAY_POS, 2);
     lcd.print(actualValue, 2);
-    lcd.setCursor(10, 3);
-    float storedValue = getCalibValue(params[currPos - 1].value_curr_mem, currPos - 1);
+    lcd.setCursor(VALUE1_DISPLAY_POS, 3);
+    float storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
     lcd.print(storedValue);
     delay(mode_loop_delays[switchMode]);
   }
@@ -171,14 +184,13 @@ void showSelectedParam() {
 
 void saveSelectedParam() {
   if (switchMode == PAR_SAVE_MODE) {
-    storeParam(params[currPos - 1]);
-    params[currPos - 1].value_curr_mem = params[currPos - 1].value_new_pot;
+    storeParam(params[currPos]);
+    params[currPos].value_curr_mem = params[currPos].value_new_pot;
     switchMode = DISPLAY_MODE;
-    actionPending = 0;
-    ierSelect = false;
-    peepSelect = false;
+    actionPending = true;
+    encoderBasedParam = -1;
     lcd.setCursor(0, 4);
-    lcd.print(params[currPos - 1].parm_name);
+    lcd.print(params[currPos].parm_name);
     lcd.print(" saved.....");
   }
 }

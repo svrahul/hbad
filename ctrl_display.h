@@ -1,8 +1,8 @@
 //Author: Venkata Rahul S, Team HBAD, 28-3-2020
 
-#define MAX_CTRL_PARAMS 6
+#define MAX_CTRL_PARAMS sizeof(params) / sizeof(params[0])
 #define DBNC_INTVL_SW 500 // millisecs before switch debounce
-#define DBNC_INTVL_ROT 50 // millisecs before rotation debounce
+#define DBNC_INTVL_ROT 150 // millisecs before rotation debounce
 #define MAX_IDLE_AFTER_SEL 10000000 //uSecs
 #define POT_TURN_MAX_WAIT_MILLIS 2000
 #define DISPLAY_MODE 0
@@ -20,7 +20,6 @@
 #define PARAM_TYPE_UCFG 1
 #define PARAM_TYPE_SENS 2
 #define UNIT_CMH2O "cmH20"
-static const int analog_pins[] = {A0, A1, A2, A3, A4, A5};
 
 static const int mode_loop_delays[] = {100, 100, 100, 100};
 static const int mode_timeouts[] = {0, 0, 500, 0};
@@ -31,72 +30,44 @@ static const String mode_headers[] = {"PRESS SELECT TO EDIT", "TURN KNOB TO SELE
 struct ctrl_parameter_t {
   unsigned short index;
   String parm_name;
+  int readPortNum;
   int min_val;
   int max_val;
   String units;
   int incr;
-  unsigned short param_type;
   int value_curr_mem;
-  int value_from_sns;
   int value_new_pot;
 };
 
-const ctrl_parameter_t tidl_volu = {1, "Tidal Volu",
-                                    200,
-                                    600,
-                                    "ml",50,
-                                    PARAM_TYPE_UCFG,
-                                    0, 0, 0
+const ctrl_parameter_t tidl_volu = {0, "TV", TIDAL_VOLUME_PIN,
+                                    200, 600,
+                                    "ml", 50,
+                                    0, 0
                                    };
-const ctrl_parameter_t resp_rate =    {2, "Resp. rate",
-                                       10,
-                                       25,
-                                       "BPM",1,
-                                       PARAM_TYPE_UCFG,
-                                       0, 0, 0
+const ctrl_parameter_t resp_rate =    {1, "RR", RR_PIN,
+                                       10, 25,
+                                       "BPM", 1,
+                                       0, 0
                                       };
-const ctrl_parameter_t peak_press =   {3, "Peak press",
-                                       40,
-                                       60,
-                                       UNIT_CMH2O,1,
-                                       PARAM_TYPE_UCFG,
-                                       0, 0, 0
+const ctrl_parameter_t peak_press =   {2, "OP", PMAX_PIN,
+                                       40, 60,
+                                       UNIT_CMH2O, 1,
+                                       0, 0
                                       };
-const ctrl_parameter_t inex_rati =    {4, "IER",
-                                       1,
-                                       3,
-                                       "ratio",1,
-                                       PARAM_TYPE_UCFG,
-                                       0, 0, 0
+const ctrl_parameter_t fio2_perc =    {3, "O2", FiO2_PIN,
+                                       20, 100,
+                                       "%", 20,
+                                       0, 0
                                       };
-const ctrl_parameter_t fio2_perc =    {6, "FiO2",
-                                       20,
-                                       100,
-                                       "%",20,
-                                       PARAM_TYPE_UCFG,
-                                       0, 0, 0
+const ctrl_parameter_t inex_rati =    {4, "IE", DISP_ENC_CLK, //READ THROUGH ENCODER
+                                       1, 3,
+                                       "ratio", 1,
+                                       0, 0
+                                      };
+const ctrl_parameter_t peep_pres =    {5, "PP", DISP_ENC_CLK, //READ THROUGH ENCODER
+                                       5, 20,
+                                       UNIT_CMH2O, 5,
+                                       0, 0
                                       };
 
-const ctrl_parameter_t peep_pres =    {5, "PEEP",
-                                       5,
-                                       20,
-                                       UNIT_CMH2O,5,
-                                       PARAM_TYPE_UCFG,
-                                       0, 0, 0
-                                      };
-
-const ctrl_parameter_t ps1_sense =    {7, "PS1",
-                                       -1,
-                                       -1,
-                                       UNIT_CMH2O,-1,
-                                       PARAM_TYPE_SENS,
-                                       0, 0, 0
-                                      };
-const ctrl_parameter_t ps2_sense =    {8, "PS2",
-                                       -1,
-                                       -1,
-                                       UNIT_CMH2O,-1,
-                                       PARAM_TYPE_SENS,
-                                       0, 0, 0
-                                      };
-static ctrl_parameter_t params[] = {tidl_volu, resp_rate, peak_press, fio2_perc, inex_rati, peep_pres, ps1_sense, ps2_sense};
+static ctrl_parameter_t params[] = {tidl_volu, resp_rate, peak_press, fio2_perc, inex_rati, peep_pres};
