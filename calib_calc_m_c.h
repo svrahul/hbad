@@ -14,6 +14,26 @@
  * global data
  */
 
+typedef struct {
+  int numOfSamples;
+  int * xVoltage;
+  int * yUnit;
+  int * eepromAddr;
+  float m;
+  float c;
+}sensorDataT;
+
+typedef struct{
+  int mV;
+  int unitX10;
+}sensorOutputDataT;
+
+/*
+ * main output sensor data global array populated in timer context.
+ */
+sensorOutputDataT sensorOutputData[NUM_OF_SENSORS];
+
+
 //slope(m) and constant(c) for all the sensors.
 float m_o2, c_o2, m_pg1, c_pg1, m_pg2, c_pg2, m_dpg1, c_dpg1, m_dpg2, c_dpg2;
 
@@ -40,18 +60,10 @@ int * addr_pg1_y_data = EEPROM_PG1_CALIB_ADDR;
 
 
 
-typedef struct {
-  int numOfSamples;
-  int * xVoltage;
-  int * yUnit;
-  int * eepromAddr;
-  float m;
-  float c;
-}sensorDataT;
 
 
 
-sensorDataT slopeConstantData[NUM_OF_SENSORS] = 
+sensorDataT sensorData[NUM_OF_SENSORS] = 
 {
   [PS1] = {    NUM_OF_SAMPLES_PS1, xPs1Unitx10, yPs1VoltX1000,addr_pg1_y_data, 0.0, 0.0  },
   [PS2] = {    NUM_OF_SAMPLES_PS2, NULL, NULL, NULL, 0.0, 0.0  },
@@ -84,9 +96,9 @@ void setup_calib_calc_m_c() {
   {
     for (index=0; index<NUM_OF_SENSORS; index++)
     {
-      write_to_eeprom(slopeConstantData[index].numOfSamples,
-          slopeConstantData[index].eepromAddr,
-          slopeConstantData[index].yUnit);
+      write_to_eeprom(sensorData[index].numOfSamples,
+          sensorData[index].eepromAddr,
+          sensorData[index].yUnit);
     }
     
     #if AVOID_EEPROM
@@ -162,21 +174,21 @@ void calc_m_c_for_all_sensors()
     Serial.println("starting calc_m_c_for_all_sensors!");
     for (index = 0; index< NUM_OF_SENSORS; index++)
     {
-      if ((slopeConstantData[index].numOfSamples == 0)||
-          (slopeConstantData[index].xVoltage == NULL)||
-          (slopeConstantData[index].yUnit == NULL))
+      if ((sensorData[index].numOfSamples == 0)||
+          (sensorData[index].xVoltage == NULL)||
+          (sensorData[index].yUnit == NULL))
       {
         continue;
       }
       calib_calculate_m_c(
-        slopeConstantData[index].numOfSamples,
-        slopeConstantData[index].xVoltage,
-        slopeConstantData[index].eepromAddr,
-        &(slopeConstantData[index].m), 
-        &(slopeConstantData[index].c));
+        sensorData[index].numOfSamples,
+        sensorData[index].xVoltage,
+        sensorData[index].eepromAddr,
+        &(sensorData[index].m), 
+        &(sensorData[index].c));
       Serial.print("sensor:");Serial.print(index);
-      Serial.print(", computed m:"); Serial.print(slopeConstantData[index].m,5);
-      Serial.print(", c:");Serial.println(slopeConstantData[index].c,5);
+      Serial.print(", computed m:"); Serial.print(sensorData[index].m,5);
+      Serial.print(", c:");Serial.println(sensorData[index].c,5);
       
     }
     Serial.println("Done calc_m_c_for_all_sensors!");
@@ -207,21 +219,21 @@ float getY(float x, float m, float c)
   return y;
 }
 
-int getVoltagex1000(sensor_e sensor, int xUnitValue)
+int getSensorMilliVoltage(sensor_e sensor, int xSensorUnitValueX10)
 {
   int y = 0;
   float y_float;
   if (sensor < NUM_OF_SENSORS)
   {
-    y_float = getY(xUnitValue,
-            slopeConstantData[sensor].m,
-            slopeConstantData[sensor].c);
+    y_float = getY(((float)xSensorUnitValueX10)/10,
+            sensorData[sensor].m,
+            sensorData[sensor].c);
     y = (int)(y_float * 1000);
   }
   #if DEBUG_PRINTS
-  Serial.print("sensor:");Serial.print(sensor);Serial.print(": ");Serial.print(xUnitValue,3);
+  Serial.print("sensor:");Serial.print(sensor);Serial.print(": ");Serial.print(xSensorUnitValueX10,3);
   Serial.print("V = ");Serial.print(y,3);Serial.println(" (x1000).");
-  Serial.print(slopeConstantData[sensor].m,5);Serial.print("m. c:");Serial.println(slopeConstantData[sensor].c,5);
+  Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
   #endif
   return y;
 }
@@ -235,14 +247,14 @@ int getSensorUnitsx10(sensor_e sensor, int yMilliVoltageValue)
   {
     y = ((float)yMilliVoltageValue)/1000;
     x_float = getX(y,
-            slopeConstantData[sensor].m,
-            slopeConstantData[sensor].c);
+            sensorData[sensor].m,
+            sensorData[sensor].c);
     x = (int)(x_float*10);
   }
   #if DEBUG_PRINTS
   Serial.print("sensor:");Serial.print(sensor);Serial.print(", ");
   Serial.print(y);Serial.print("mV = ");Serial.print(x);Serial.println(" (x10).");
-  Serial.print(slopeConstantData[sensor].m,5);Serial.print("m. c:");Serial.println(slopeConstantData[sensor].c,5);
+  Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
   #endif
   return x;
 }
@@ -336,7 +348,7 @@ void test_loop_calib_calc_m_c() {
   }
 }
 
-int PS_ReadSensorMilliVolt(int Channel)
+int PS_ReadSensor(int Channel)
 {
   float SensorVolt;
   if (Channel == O2)
@@ -350,10 +362,39 @@ int PS_ReadSensorMilliVolt(int Channel)
   return(int(SensorVolt*1000));
 }
 
+int PS_ReadSensorMilliVolt(int Channel)
+{
+  if (Channel<NUM_OF_SENSORS)
+  {
+    return(sensorOutputData[Channel].mV);
+  }
+  return 0;
+}
+
 int PS_ReadSensorValueX10(int Channel)
 {
-  int Pressurex10,SensorMilliVolt;
-  SensorMilliVolt = PS_ReadSensorMilliVolt(Channel);
-  Pressurex10 = getSensorUnitsx10(Channel, SensorMilliVolt);
-  return(Pressurex10);
+  if (Channel<NUM_OF_SENSORS)
+  {
+    return(sensorOutputData[Channel].unitX10);
+  }
+  return 0;
 }
+
+
+void saveSensorData(void)
+{
+  int index=0;
+  unsigned long timeUs;
+  timeUs = micros();
+  //Serial.println("timer start");
+  interrupts();
+  for (index = 0; index< NUM_OF_SENSORS; index++)
+  {
+    sensorOutputData[index].mV = PS_ReadSensor(index);
+    sensorOutputData[index].unitX10 = getSensorUnitsx10(index, sensorOutputData[index].mV);
+  }
+  //interrupts();
+  timeUs = micros()-timeUs;
+  Serial.print("done in ");Serial.println(timeUs);
+}
+

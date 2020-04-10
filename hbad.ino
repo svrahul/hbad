@@ -23,6 +23,26 @@ volatile boolean actionPending = true;
 boolean ierSelect = false;
 boolean peepSelect = false;
 
+
+void setupTimer1() {
+  noInterrupts();
+  // Clear registers
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1 = 0;
+
+  // 100 Hz (16000000/((624+1)*256))
+  // OCR1A = (16000000)/(100*256)
+  OCR1A = 62500;
+  // CTC
+  TCCR1B |= (1 << WGM12);
+  // Prescaler 256
+  TCCR1B |= (1 << CS12);
+  // Output Compare Match A Interrupt Enable
+  TIMSK1 |= (1 << OCIE1A);
+  interrupts();
+}
+
 void setup() {
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
@@ -39,6 +59,12 @@ void setup() {
   {
     Diagnostics_Mode();
   }
+  setupTimer1();
+}
+
+
+ISR(TIMER1_COMPA_vect) {
+  saveSensorData();
 }
 
 void loop() {
