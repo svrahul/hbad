@@ -4,7 +4,7 @@
 #include "hbad_memory.h"
 #include "ventilator_sensors.h"
 
-#define AVOID_EEPROM 0
+#define AVOID_EEPROM 1
 #define DEBUG_PRINTS 0
 
 
@@ -110,7 +110,7 @@ void setup_calib_calc_m_c() {
   }
   Serial.println("Done calib_calc_m_c setup!");
   calc_m_c_for_all_sensors();
-  ADS1115_init();
+  //ADS1115_init();
 }
 
 /*

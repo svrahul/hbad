@@ -1,18 +1,19 @@
 #include <Wire.h>
 #include "pinout.h"
 #include "ctrl_display.h"
-#include "lcd.h"
+//#include "lcd.h"
 #include "hbad_serial.h"
 #include "calib_calc_m_c.h"
 #include "sensor_params.h"
 #include "sensor_read.h"
-#include "Diagnostics.h"
 #include "./libraries/MsTimer2/MsTimer2.h"
 #include "./libraries/MsTimer2/MsTimer2.cpp"
+#include "Service_Mode.h"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
 unsigned short newPeep = 5;
+
 
 int ctrlParamChangeInit = 0;
 volatile int switchMode = 0;
@@ -43,12 +44,13 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
   setup_calib_calc_m_c();
+  setup_service_mode();
   MsTimer2::set(120, saveSensorData);
   MsTimer2::start();
   
   if(digitalRead(DISP_ENC_SW))
   {
-    Diagnostics_Mode();
+    //Diagnostics_Mode();
   }
 }
 
