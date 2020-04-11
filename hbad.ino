@@ -3,7 +3,11 @@
 #include "ctrl_display.h"
 #include "lcd.h"
 #include "hbad_serial.h"
-#include "hbad_memory.h"
+#include "calib_calc_m_c.h"
+#include "sensor_params.h"
+#include "sensor_read.h"
+#include "Diagnostics.h"
+#include <MsTimer2.h>
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -34,7 +38,16 @@ void setup() {
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
+  setup_calib_calc_m_c();
+  MsTimer2::set(1000, saveSensorData);
+  MsTimer2::start();
+  
+  if(digitalRead(DISP_ENC_SW))
+  {
+    Diagnostics_Mode();
+  }
 }
+
 
 void loop() {
   //  sendCommands();
