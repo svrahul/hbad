@@ -6,11 +6,11 @@ static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
 #include "ctrl_display.h"
 #include "lcd.h"
 #include "hbad_serial.h"
-//#include "hbad_memory.h"
 #include "calib_calc_m_c.h"
 #include "sensor_params.h"
 #include "sensor_read.h"
 #include "Diagnostics.h"
+#include <MsTimer2.h>
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -24,25 +24,6 @@ boolean ierSelect = false;
 boolean peepSelect = false;
 
 
-void setupTimer1() {
-  noInterrupts();
-  // Clear registers
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCNT1 = 0;
-
-  // 100 Hz (16000000/((624+1)*256))
-  // OCR1A = (16000000)/(100*256)
-  OCR1A = 62500;
-  // CTC
-  TCCR1B |= (1 << WGM12);
-  // Prescaler 256
-  TCCR1B |= (1 << CS12);
-  // Output Compare Match A Interrupt Enable
-  TIMSK1 |= (1 << OCIE1A);
-  interrupts();
-}
-
 void setup() {
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
@@ -55,17 +36,15 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
 
   setup_calib_calc_m_c();
+  MsTimer2::set(1000, saveSensorData);
+  MsTimer2::start();
+  
   if(digitalRead(DISP_ENC_SW))
   {
     Diagnostics_Mode();
   }
-  setupTimer1();
 }
 
-
-ISR(TIMER1_COMPA_vect) {
-  saveSensorData();
-}
 
 void loop() {
   sendCommands();

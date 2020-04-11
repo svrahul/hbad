@@ -253,7 +253,7 @@ int getSensorUnitsx10(sensor_e sensor, int yMilliVoltageValue)
   }
   #if DEBUG_PRINTS
   Serial.print("sensor:");Serial.print(sensor);Serial.print(", ");
-  Serial.print(y);Serial.print("mV = ");Serial.print(x);Serial.println(" (x10).");
+  Serial.print(yMilliVoltageValue);Serial.print("mV = ");Serial.print(x);Serial.println(" (x10).");
   Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
   #endif
   return x;
