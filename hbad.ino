@@ -7,7 +7,8 @@
 #include "sensor_params.h"
 #include "sensor_read.h"
 #include "Diagnostics.h"
-#include <MsTimer2.h>
+#include "./libraries/MsTimer2/MsTimer2.h"
+#include "./libraries/MsTimer2/MsTimer2.cpp"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -18,7 +19,9 @@ volatile int switchMode = 0;
 volatile static short announced = 0;
 volatile boolean actionPending = false;
 int lastCLK = 0;
-boolean currPosChanged = 0;
+String saveFlag = "Save  ";
+String cancelFlag = "Cancel";
+int currentSaveFlag = 1;
 #define ROT_ENC_FOR_IER (currPos == inex_rati.index)
 #define ROT_ENC_FOR_PEEP (currPos == peep_pres.index)
 
@@ -205,20 +208,21 @@ void showSelectedParam() {
     if (currPos == inex_rati.index || currPos == peep_pres.index) {
       return;
     }
-
     params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
     lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-    //    sprintf(paddedValue, "%4d", params[currPos].value_new_pot);
-    //    lcd.print(paddedValue);
-    //    Serial.print("pot:");Serial.print(params[currPos].readPortNum);
-    //    Serial.print("\tcurrPos:");Serial.println(currPos);
-    //    Serial.print("\tpot:");Serial.println(params[currPos].value_new_pot);
     float actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
     lcd.setCursor(VALUE1_DISPLAY_POS, 1);
     lcd.print(actualValue, 2);
     lcd.setCursor(VALUE1_DISPLAY_POS, 2);
     float storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
     lcd.print(storedValue);
+    lcd.setCursor(14, 3);
+    if (currentSaveFlag == 1) {
+      lcd.print(saveFlag);
+    } else {
+      lcd.print(cancelFlag);
+    }
+    processRotationInSelectedMode();
     delay(mode_loop_delays[switchMode]);
   }
 }
@@ -226,14 +230,18 @@ void showSelectedParam() {
 void saveSelectedParam() {
   if (switchMode == PAR_SAVE_MODE) {
     //    Serial.println(params[currPos].value_new_pot);
-    storeParam(params[currPos]);
-    params[currPos].value_curr_mem = params[currPos].value_new_pot;
-    //    Serial.println(params[currPos].value_curr_mem);
-    switchMode = DISPLAY_MODE;
-    actionPending = false;
     lcd.setCursor(0, 3);
     lcd.print(params[currPos].parm_name);
-    lcd.print(" saved.....");
+    if (currentSaveFlag == 0) {
+      lcd.print(" not saved.....   ");
+    } else {
+      storeParam(params[currPos]);
+      params[currPos].value_curr_mem = params[currPos].value_new_pot;
+      //    Serial.println(params[currPos].value_curr_mem);
+      lcd.print(" saved.....");
+    }
+    actionPending = false;
+    switchMode = DISPLAY_MODE;
     delay(1000);
     cleanRow(3);
   }
@@ -275,4 +283,26 @@ int rectifyBoundaries(int value, int minimum, int maximum) {
     return minimum;
   }
   return value;
+}
+
+void processRotationInSelectedMode() {
+  /*Index_select loop*/
+  unsigned long lastRotateTime = 0;
+  unsigned long rotateTime = millis();
+  int currentStateCLK = digitalRead(DISP_ENC_CLK);
+  while (switchMode == PAR_SELECTED_MODE) {
+    if ((rotateTime - lastRotateTime) < DBNC_INTVL_ROT) {
+      return;
+    }
+    rotateTime = millis();
+    //Serial.println("abc");
+    currentStateCLK = digitalRead(DISP_ENC_CLK);
+    if (currentStateCLK != lastCLK) {
+      currentSaveFlag = 1 - currentSaveFlag;
+      return;
+    }
+    lastCLK = currentStateCLK;
+    lastRotateTime = rotateTime;
+    delay(50);
+  }
 }
