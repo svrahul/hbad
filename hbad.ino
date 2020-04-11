@@ -243,7 +243,7 @@ void isr_processStartEdit() {
    The getCalibValue is for calibrating any integer to a parameter.
    The parameter is input with the help of an index
 */
-float getCalibValue(int potValue, int paramIndex) {
+int getCalibValue(int potValue, int paramIndex) {
   float convVal = map(potValue, 0, POT_HIGH, params[paramIndex].min_val, params[paramIndex].max_val);
   return ((int)(convVal / params[paramIndex].incr) + 1) * params[paramIndex].incr;
 }
@@ -251,7 +251,7 @@ float getCalibValue(int potValue, int paramIndex) {
 /*
    The below method is for a specific parameter
 */
-float getCalibratedParam(ctrl_parameter_t param) {
+int getCalibratedParam(ctrl_parameter_t param) {
   float convVal = map(param.value_curr_mem, 0, POT_HIGH, param.min_val, param.max_val);
   return ((int)(convVal / param.incr) + 1) * param.incr;
 }
