@@ -1,10 +1,7 @@
-#include <Adafruit_ADS1015.h>
-
 
 #include <Wire.h>
-//#include "Adafruit_ADS1015.h"
-
 #include "./libraries/Adafruit_ADS1X15/Adafruit_ADS1015.h"
+#include "./libraries/Adafruit_ADS1X15/Adafruit_ADS1015.cpp"
 
 Adafruit_ADS1115 ads; 
 
