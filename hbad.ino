@@ -1,13 +1,9 @@
-static const uint8_t ctrl_pins[] = {A0, A1, A2, A3, A4, A5, A6};
-
-//#include <Encoder.h>
 #include <Wire.h>
 #include "pinout.h"
 #include "ctrl_display.h"
 #include "lcd.h"
 #include "hbad_serial.h"
 #include "hbad_memory.h"
-#include "calib.h"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -85,6 +81,7 @@ void listDisplayMode() {
     lcd.print(mode_headers[switchMode]);
     unsigned int nextLine = 1;
     for (int i = 0; i < MAX_CTRL_PARAMS; i += 2) {
+      cleanRow(nextLine);
       lcd.setCursor(NAME1_DISPLAY_POS, nextLine);
       lcd.print(params[i].parm_name);
       lcd.setCursor(VALUE1_DISPLAY_POS, nextLine);
