@@ -66,7 +66,7 @@ int * addr_pg1_y_data = EEPROM_PG1_CALIB_ADDR;
 sensorDataT sensorData[NUM_OF_SENSORS] = 
 {
   [PS1] = {    NUM_OF_SAMPLES_PS1, xPs1Unitx10, yPs1VoltX1000,addr_pg1_y_data, 0.0, 0.0  },
-  [PS2] = {    NUM_OF_SAMPLES_PS2, NULL, NULL, NULL, 0.0, 0.0  },
+  [PS2] = {    NUM_OF_SAMPLES_PS1, xPs1Unitx10, yPs1VoltX1000,addr_pg1_y_data, 0.0, 0.0  },//PS2=PS1
   [DPS1] = {    NUM_OF_SAMPLES_DPS1, NULL, NULL, NULL, 0.0, 0.0  },
   [DPS2] = {    NUM_OF_SAMPLES_DPS2, NULL, NULL, NULL, 0.0, 0.0  },
   [O2]={    NUM_OF_SAMPLES_O2, xO2UnitX10, yO2VoltX1000, addr_o2_y_data,0.0, 0.0  },
