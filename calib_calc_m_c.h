@@ -384,9 +384,11 @@ int PS_ReadSensorValueX10(int Channel)
 void saveSensorData(void)
 {
   int index=0;
+  #if DEBUG_PRINTS
   unsigned long timeUs;
   timeUs = micros();
   //Serial.println("timer start");
+  #endif
   interrupts();
   for (index = 0; index< NUM_OF_SENSORS; index++)
   {
@@ -394,7 +396,8 @@ void saveSensorData(void)
     sensorOutputData[index].unitX10 = getSensorUnitsx10(index, sensorOutputData[index].mV);
   }
   //interrupts();
+  #if DEBUG_PRINTS
   timeUs = micros()-timeUs;
   Serial.print("done in ");Serial.println(timeUs);
+  #endif
 }
-

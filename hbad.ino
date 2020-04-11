@@ -40,7 +40,7 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
   setup_calib_calc_m_c();
-  MsTimer2::set(1000, saveSensorData);
+  MsTimer2::set(120, saveSensorData);
   MsTimer2::start();
   
   if(digitalRead(DISP_ENC_SW))
