@@ -17,7 +17,6 @@ int ctrlParamChangeInit = 0;
 volatile int switchMode = 0;
 volatile static short announced = 0;
 volatile boolean actionPending = false;
-static int encoderBasedParam = -1;
 int lastCLK = 0;
 boolean currPosChanged = 0;
 #define ROT_ENC_FOR_IER (currPos == inex_rati.index)
@@ -33,11 +32,12 @@ void setup() {
   pinMode(DISP_ENC_DT, INPUT);
   pinMode(DISP_ENC_SW, INPUT_PULLUP);
   lcd.begin(LCD_LENGTH_CHAR, LCD_HEIGHT_CHAR);
-  hbad_mem.begin();
   Wire.setClock(4000000L);
   Wire.begin();
+  hbad_mem.begin();
   Serial.begin(9600);
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
+  getAllParamsFromMem();
 }
 
 void loop() {
@@ -51,7 +51,7 @@ void loop() {
   showSelectedParam();
   saveSelectedParam();
   if (!actionPending) {
-    delay(2000);
+    delay(1000);
   }
 }
 void sendCommands() {
@@ -95,6 +95,9 @@ void listDisplayMode() {
       if (doNotSkipCalib) {
         lcd.print(getCalibratedParam(params[i]));
       } else {
+        if (i == inex_rati.index) {
+          lcd.print("1:");
+        }
         lcd.print(params[i].value_curr_mem);
       }
       lcd.print(" ");
@@ -103,8 +106,11 @@ void listDisplayMode() {
       lcd.print(params[i + 1].parm_name);
       lcd.setCursor(VALUE2_DISPLAY_POS, nextLine);
       if (doNotSkipCalib) {
-        lcd.print(getCalibratedParam(params[i+1]));
+        lcd.print(getCalibratedParam(params[i + 1]));
       } else {
+        if ((i + 1) == inex_rati.index) {
+          lcd.print("1:");
+        }
         lcd.print(params[i + 1].value_curr_mem);
       }
       nextLine++;
@@ -122,7 +128,12 @@ void editParameterMode() {
     }
     lcd.setCursor(NAME1_DISPLAY_POS, 1);
     lcd.print(params[currPos].parm_name);
-    lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+    if (currPos == inex_rati.index) {
+      lcd.print(" 1:");
+      lcd.setCursor(VALUE1_DISPLAY_POS + 2, 1);
+    } else {
+      lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+    }
     lcd.print(params[currPos].value_curr_mem);
   }
 }
@@ -186,15 +197,15 @@ void showSelectedParam() {
 
     params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
     lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-    sprintf(paddedValue, "%4d", params[currPos].value_new_pot);
-    lcd.print(paddedValue);
+    //    sprintf(paddedValue, "%4d", params[currPos].value_new_pot);
+    //    lcd.print(paddedValue);
     //    Serial.print("pot:");Serial.print(params[currPos].readPortNum);
     //    Serial.print("\tcurrPos:");Serial.println(currPos);
     //    Serial.print("\tpot:");Serial.println(params[currPos].value_new_pot);
     float actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
-    lcd.setCursor(VALUE1_DISPLAY_POS, 2);
+    lcd.setCursor(VALUE1_DISPLAY_POS, 1);
     lcd.print(actualValue, 2);
-    lcd.setCursor(VALUE1_DISPLAY_POS, 3);
+    lcd.setCursor(VALUE1_DISPLAY_POS, 2);
     float storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
     lcd.print(storedValue);
     delay(mode_loop_delays[switchMode]);

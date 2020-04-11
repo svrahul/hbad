@@ -26,7 +26,7 @@ static const int mode_timeouts[] = {0, 0, 500, 0};
 
 static const char CFG_INDICATOR ((char) 162);
 
-static const String mode_headers[] = {"PRESS SELECT TO EDIT", "TURN KNOB TO SELECT", "TURN POT TO SETECT", "PRESS SELECT TO SAVE"};
+static const String mode_headers[] = {"PRESS SELECT TO EDIT", "TURN KNOB TO SELECT ", "TURN POT TO SELECT  ", "PRESS SELECT TO SAVE"};
 struct ctrl_parameter_t {
   unsigned short index;
   String parm_name;
