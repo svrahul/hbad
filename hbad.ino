@@ -31,6 +31,7 @@ void setup() {
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
   pinMode(DISP_ENC_SW, INPUT_PULLUP);
+  pinMode(ADS115_INT_PIN, INPUT_PULLUP);
   lcd.begin(LCD_LENGTH_CHAR, LCD_HEIGHT_CHAR);
   Wire.setClock(4000000L);
   Wire.begin();

@@ -15,6 +15,7 @@
 //I2C
 #define I2C_SCL_PIN         21   //Unchanged
 #define I2C_SDA_PIN         20   // Unchanged
+#define ADS115_INT_PIN      6
 
 //Display
 #define DISPLAY_1_PIN       29   // Changed

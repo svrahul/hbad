@@ -1,14 +1,18 @@
-
-#include <Wire.h>
 #include <Adafruit_ADS1015.h>
 
-Adafruit_ADS1115 ads;
+
+#include <Wire.h>
+//#include "Adafruit_ADS1015.h"
+
+#include "./libraries/Adafruit_ADS1X15/Adafruit_ADS1015.h"
+
+Adafruit_ADS1115 ads; 
 
 
 // These constants won't change. They're used to give names to the pins used:
 const int OxygenAnalog = A0;  // Analog input pin that the potentiometer is attached to
 const int PotValue = A1;  // Analog input pin that the potentiometer is attached to
-const int MaxAdcSamples = 10;
+const int MaxAdcSamples = 5;
 int ADCSampleBuff[MaxAdcSamples]= {0};
 
 float OxygenFianlAnalog;
@@ -47,7 +51,7 @@ float ADC_ReadVolageOnATMega2560(int Channel);
 float ADS1115_ReadVolageOverI2C(int Channel);
 void ADS1115_init(void);
 float ADC_ApplyAvgFilter(int *SampleBuf, int SampleCount, float Multiplier);
-
+int ADC_GetMedian(int *SampleBuf, int len);
 // the loop function runs over and over again forever
 /*void test_loop() {
   #if SERIAL_PRINTS
@@ -87,7 +91,9 @@ float ADS1115_ReadVolageOverI2C(int Channel)
   float PressSensorVolts=0.0;
   for(int i=0; i<MaxAdcSamples; i++)
   {
-    ADCSampleBuff[i] = ads.readADC_SingleEnded(Channel);
+    ads.readADC_SingleEnded(Channel);
+    while(digitalRead(ADS115_INT_PIN));
+    ADCSampleBuff[i] = ads.readADC_ConvertedSample();
     #if SERIAL_PRINTS
     Serial.print(ADCSampleBuff[i]);
     Serial.print(" ");
@@ -102,9 +108,10 @@ float ADS1115_ReadVolageOverI2C(int Channel)
 
   return(PressSensorVolts);
 }
-
+  
 float ADC_ReadVolageOnATMega2560(int Channel)
 {
+  
   int ADCCount, AvgSampleCount;
   float Avg10Samples;
   float SumValue= 0.0, ADCThresH=0.0, ADCThresL=0.0;
@@ -126,8 +133,56 @@ float ADC_ReadVolageOnATMega2560(int Channel)
   return(OxygenSensorVolts);
 }
 
-
+float ADC_ApplyAvgFilter(int *SampleBuf, int SampleCount, float Multiplier)
+{
+  int MedianSample;
  
+  MedianSample = ADC_GetMedian(SampleBuf,SampleCount);
+ #if SERIAL_PRINTS
+ Serial.print("Median ");
+ Serial.println(MedianSample);
+ 
+  for(int i=0; i<SampleCount; i++)
+  {
+    Serial.print(SampleBuf[i]);
+    Serial.print(" ");
+   }
+  #endif
+  return(MedianSample * Multiplier);
+  
+}
+
+int ADC_GetMedian(int *SampleBuf, int len)
+{
+  int i,j,a;
+  long int median = 0;
+  //sort the samples 
+  for (i = 0; i < len; ++i) 
+  {
+    for (j = i + 1; j < len; ++j)
+    {
+      if (SampleBuf[i] > SampleBuf[j]) 
+      {
+        a =  SampleBuf[i];
+        SampleBuf[i] = SampleBuf[j];
+        SampleBuf[j] = a;
+      }
+    }
+  }
+
+  i = len/2;
+  if((len%2)==0)
+  {
+    median = ((long int)SampleBuf[i-1]+(long int)SampleBuf[i])/2;
+  }
+  else
+  {
+    median = SampleBuf[i];
+  }
+  return((int)median);
+}
+
+ /*
 float ADC_ApplyAvgFilter(int *SampleBuf, int SampleCount, float Multiplier)
 {
   int AvgSampleCount;
@@ -179,3 +234,4 @@ float ADC_ApplyAvgFilter(int *SampleBuf, int SampleCount, float Multiplier)
   
   return (SensorVolts); 
 }
+*/
