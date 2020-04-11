@@ -16,3 +16,11 @@ void cleanRow(unsigned short row) {
     lcd.print(" ");
   }
 }
+
+
+void cleanColRow(unsigned short col,unsigned short row) {
+  lcd.setCursor(col, row);
+  for (int i = col; i < LCD_LENGTH_CHAR; i++) {
+    lcd.print(" ");
+  }
+}

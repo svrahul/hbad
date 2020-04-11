@@ -45,7 +45,7 @@ const ctrl_parameter_t tidl_volu = {0, "TV", TIDAL_VOLUME_PIN,
                                     0, 0
                                    };
 const ctrl_parameter_t resp_rate =    {1, "RR", RR_PIN,
-                                       10, 25,
+                                       5, 35,
                                        "BPM", 1,
                                        0, 0
                                       };
