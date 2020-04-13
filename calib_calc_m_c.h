@@ -4,7 +4,7 @@
 #include "hbad_memory.h"
 #include "ventilator_sensors.h"
 
-#define AVOID_EEPROM 1
+#define AVOID_EEPROM 0
 #define DEBUG_PRINTS 0
 
 

@@ -14,7 +14,7 @@ volatile short currPos = 1;
 unsigned short newIER = 1;
 unsigned short newPeep = 5;
 
-
+long int resetEditModetime;
 int ctrlParamChangeInit = 0;
 volatile int switchMode = 0;
 volatile static short announced = 0;
@@ -33,6 +33,7 @@ int gCtrlParamUpdated = 0;
 
 
 void setup() {
+  
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
   pinMode(DISP_ENC_SW, INPUT_PULLUP);
@@ -47,30 +48,67 @@ void setup() {
   getAllParamsFromMem();
   setup_calib_calc_m_c();
   setup_service_mode();
+  displayInitialScreen();
   MsTimer2::set(120, saveSensorData);
   MsTimer2::start();
-  
-  if(digitalRead(DISP_ENC_SW))
+  Serial.println("Exiting setup !");
+}
+boolean runInitDisplay = true;
+void displayRunTime()
+{
+  if (runInitDisplay)
   {
-    //Diagnostics_Mode();
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("RunTime parameters");
+    runInitDisplay = false;
   }
+  cleanRow(1);cleanRow(2);cleanRow(3);
+
+  lcd.setCursor(0,1);
+  lcd.print("TV:");
+  lcd.print(tidl_volu.value_curr_mem);
+
+  lcd.setCursor(7,1);
+  lcd.print("RR:");
+  lcd.print(resp_rate.value_curr_mem);
+
+  lcd.setCursor(13,1);
+  lcd.print("IER:");
+  lcd.print(inex_rati.value_curr_mem);
+
+
+  lcd.setCursor(0,2);
+  lcd.print("PP:");
+  lcd.print(peep_pres.value_curr_mem);
+  
+  lcd.setCursor(6,2);
+  lcd.print("O2:");
+  lcd.print((PS_ReadSensorValueX10(O2))/10);
+
+  lcd.setCursor(12,2);
+  lcd.print("IP:");
+  lcd.print(PS_ReadSensorValueX10(PS1)/10);
+
+  lcd.setCursor(0,3);
+  lcd.print("EP:");
+  lcd.print(PS_ReadSensorValueX10(PS2)/10);
 }
 
 
 void loop() {
-  //  sendCommands();
-  announce();
-  //  Serial.println("currPos before\t");
-  //  Serial.println(currPos);
-  processRotation();
-  //  Serial.println("currPos after\t");
-  //  Serial.println(currPos);
-  showSelectedParam();
-  saveSelectedParam();
-  if (!actionPending) {
-    delay(1000);
+  RT_Events_T eRTState;
+  displayRunTime();
+  eRTState = encoderScanUnblocked();
+  if (eRTState == RT_BT_PRESS)
+  {
+    Serial.println("Entering Edit mode!");
+    MsTimer2::stop();
+    editMode();
+    MsTimer2::start();
+    runInitDisplay = true;
   }
-
+  delay (50);
   if(gSensorDataUpdated ==1)
   {
     gSensorDataUpdated = 0;
@@ -82,6 +120,29 @@ void loop() {
     UART3_SendDAQDataGraphicDisplay(PARAMS_DATA);
   }
 }
+
+void editMode()
+{
+  lcd.clear();
+  switchMode = DISPLAY_MODE;
+  resetEditModetime=millis();
+  do{
+    //  sendCommands();
+    announce();
+    delay(100);
+    //  Serial.println("currPos before\t");
+    //  Serial.println(currPos);
+    processRotation();
+    //  Serial.println("currPos after\t");
+    //  Serial.println(currPos);
+    showSelectedParam();
+    saveSelectedParam();
+    if (!actionPending) {
+      delay(1000);
+    }
+  }while ((millis() - resetEditModetime) < 5000);
+}
+
 void sendCommands() {
   String oprName = "P";
   String command;
@@ -104,6 +165,7 @@ void announce() {
   if (announced == 0) {
     listDisplayMode();
     editParameterMode();
+    //announced = 1;
   }
 }
 
@@ -210,6 +272,7 @@ int processRotation() {
       } else {
         currPos = rectifyBoundaries(currPos + cursorIndex, 0, MAX_CTRL_PARAMS - 1);
       }
+      resetEditModetime=millis();
     }
     retVal = currPos;
     lastCLK = currentStateCLK;
@@ -248,6 +311,7 @@ void showSelectedParam() {
     } else {
       lcd.print(cancelFlag);
     }
+    resetEditModetime=millis();
     processRotationInSelectedMode();
     delay(mode_loop_delays[switchMode]);
   }
@@ -270,6 +334,7 @@ void saveSelectedParam() {
     switchMode = DISPLAY_MODE;
     delay(1000);
     cleanRow(3);
+    resetEditModetime=millis();
   }
 }
 
@@ -280,6 +345,7 @@ void isr_processStartEdit() {
     return;
   }
   switchMode = (switchMode + 1) % 4;
+  resetEditModetime=millis();
   announced = 0;
   actionPending = 1;
   lastSwitchTime = switchTime;
@@ -325,12 +391,88 @@ void processRotationInSelectedMode() {
     currentStateCLK = digitalRead(DISP_ENC_CLK);
     if (currentStateCLK != lastCLK) {
       currentSaveFlag = 1 - currentSaveFlag;
+      resetEditModetime=millis();
       return;
     }
     lastCLK = currentStateCLK;
     lastRotateTime = rotateTime;
     delay(25);
   }
+}
+
+
+void displayChannelData(sensor_e sensor)
+{
+  int o2mVReading, o2Unitx10;
+  RT_Events_T eRTState = RT_NONE;
+ // #if SERIAL_PRINTS
+  Serial.println("we are in diagO2Sensor");
+ // #endif
+  
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Input for:");
+  lcd.print(menuItems[currentMenuIdx].menu[seletIndicator + scrollIndex -1 ]);
+  lcd.setCursor(0,1);
+  
+  lcd.print("current reading:");
+
+  while(RT_NONE == eRTState)
+  {
+    lcd.setCursor(0,2);
+   o2mVReading = PS_ReadSensor( sensor );
+    Serial.print(o2mVReading);
+    Serial.print(DPS2);
+    lcd.print(o2mVReading);
+    lcd.print("mV, ");
+    o2Unitx10 = getSensorUnitsx10(O2, o2mVReading);
+    lcd.print(((float)o2Unitx10)/10);
+    if (sensor == O2)
+    {
+      lcd.print("%");
+    }
+    else
+    {
+      lcd.print ("pressure units");
+    }
+    for(int wait = 0; wait<200; wait+=20)
+    {
+      eRTState = encoderScanUnblocked();
+      if (eRTState != RT_NONE)
+      {
+        break;
+      }
+      delay (20);
+    }
+  }
+  switch(eRTState)
+  {
+    case RT_INC:
+    case RT_DEC:
+    #if SERIAL_PRINTS
+       Serial.println("leave without changes from diagO2Sensor");
+    #endif
+       break;
+    case   RT_BT_PRESS:
+       //diagSaveCalibData(O2,o2mVReading, o2Unitx10);
+       #if SERIAL_PRINTS
+       Serial.println("save diagO2Sensor");
+       #endif
+       break;
+  }
+}
+
+void diagO2Sensor(void)
+{
+  displayChannelData(O2);
+}
+void diagAds1115(void)
+{
+  displayChannelData(PS1);
+}
+void diagSolStatus(void)
+{
+    Serial.println("we are in diagSolStatus");
 }
 
 void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
@@ -376,4 +518,3 @@ void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
   }
   
  }
-

@@ -1,6 +1,6 @@
 
 #include "lcd.h"
-#define SERIAL_PRINTS 0
+#define SERIAL_PRINTS 1
 
 typedef enum 
 {
@@ -48,7 +48,7 @@ int seletIndicator = 1; // can be 1,2,3
 int scrollIndex = 0;
 
 
-#define MAIN_MENU_LENGTH 3
+#define MAIN_MENU_LENGTH 4
 #define SUB_MENU1_LENGTH 6
 #define SUB_MENU2_LENGTH 5
 #define SUB_MENU3_LENGTH 4
@@ -56,7 +56,7 @@ int scrollIndex = 0;
 
 
 
-char* mainMenu[MAIN_MENU_LENGTH] = {" O2-Calib"," Check ADS1115"," Read SOL"};
+char* mainMenu[MAIN_MENU_LENGTH] = {" exit diag mode", " O2-Calib"," Check ADS1115"," Read SOL"};
 char* subMenu1[SUB_MENU1_LENGTH] = {" go back", " O2 0%"," O2 21.6%"," O2 28%", " O2 40%"," O2 100%"};
 char* subMenu2[SUB_MENU2_LENGTH] = {" go back", " Read PS1"," Read PS2"," Read DPS1"," Read DPS2"};
 char* subMenu3[SUB_MENU3_LENGTH] = {" go back", " Read SOL1"," Read SOL2"," Read SOL3"};
@@ -66,6 +66,8 @@ void diagAds1115(void);
 void diagSolStatus(void);
 void setup_service_mode ();
 void print_menu_common( menuIndex menuIdx);
+void editMode();
+RT_Events_T encoderScanUnblocked();
 
 menuItemsT menuItems[MAX_MENUS] = 
 {
@@ -94,59 +96,66 @@ void loop__ ()
 }  
 
 
+boolean no_input = true;
+RT_Events_T encoderScanUnblocked()
+{
+  RT_Events_T eRTState = RT_NONE;
+    // Read the current state of CLK
+  currentStateCLK = digitalRead(DISP_ENC_CLK);
+  
+  // If last and current state of CLK are different, then pulse occurred
+  // React to only 1 state change to avoid double count
+  if(currentStateCLK != lastStateCLK)
+  {
+   // delay(1);
+    currentStateCLK = digitalRead(DISP_ENC_CLK);
+    if((currentStateCLK != lastStateCLK) && (currentStateCLK == 1))
+    {
+      // If the DT state is different than the CLK state then
+      // the encoder is rotating CCW so decrement
+      if (digitalRead(DISP_ENC_DT) != currentStateCLK) {
+        eRTState = RT_DEC;
+        no_input = false;
+      } else {
+        // Encoder is rotating CW so increment
+        eRTState = RT_INC;
+        no_input = false;
+      }
+    }
+  }
+
+  // Remember last CLK state
+  lastStateCLK = currentStateCLK;
+
+  // Read the button state
+  int btnState = digitalRead(DISP_ENC_SW);
+
+  //If we detect LOW signal, button is pressed
+  if (btnState == LOW) 
+  {
+    //if 50ms have passed since last LOW pulse, it means that the
+    //button has been pressed, released and pressed again
+    if (millis() - lastButtonPress > 50) {
+      eRTState = RT_BT_PRESS;
+      no_input = false;
+    }
+
+    // Remember last button press event
+    lastButtonPress = millis();
+  }
+  return eRTState;
+}
 
 int Menu_Sel=0;
 
-
+boolean continue_diag_mode = true;
 RT_Events_T Encoder_Scan(void)
 {
   RT_Events_T eRTState = RT_NONE;
-  boolean no_input = true;
+  no_input = true;
   while(no_input)
   {
-    // Read the current state of CLK
-    currentStateCLK = digitalRead(DISP_ENC_CLK);
-    
-    // If last and current state of CLK are different, then pulse occurred
-    // React to only 1 state change to avoid double count
-    if(currentStateCLK != lastStateCLK)
-    {
-     // delay(1);
-      currentStateCLK = digitalRead(DISP_ENC_CLK);
-      if((currentStateCLK != lastStateCLK) && (currentStateCLK == 1))
-      {
-        // If the DT state is different than the CLK state then
-        // the encoder is rotating CCW so decrement
-        if (digitalRead(DISP_ENC_DT) != currentStateCLK) {
-          eRTState = RT_DEC;
-          no_input = false;
-        } else {
-          // Encoder is rotating CW so increment
-          eRTState = RT_INC;
-          no_input = false;
-        }
-      }
-    }
-  
-    // Remember last CLK state
-    lastStateCLK = currentStateCLK;
-  
-    // Read the button state
-    int btnState = digitalRead(DISP_ENC_SW);
-  
-    //If we detect LOW signal, button is pressed
-    if (btnState == LOW) 
-    {
-      //if 50ms have passed since last LOW pulse, it means that the
-      //button has been pressed, released and pressed again
-      if (millis() - lastButtonPress > 50) {
-        eRTState = RT_BT_PRESS;
-        no_input = false;
-      }
-  
-      // Remember last button press event
-      lastButtonPress = millis();
-    }
+    eRTState = encoderScanUnblocked();
   }
   // Put in a slight delay to help debounce the reading
   //delay(1);
@@ -255,11 +264,17 @@ void selection()
   lcd.clear();
 
   if ((seletIndicator == 1) &&
-      (scrollIndex == 0) &&
-      (currentMenuIdx != mainMenuE))
+      (scrollIndex == 0))
   {
-    currentMenuLevel = MENU_LEVEL_0; 
-    currentMenuIdx = mainMenuE;
+    if (currentMenuIdx != mainMenuE)
+    {
+      currentMenuLevel = MENU_LEVEL_0; 
+      currentMenuIdx = mainMenuE;
+    }
+    else
+    {
+      continue_diag_mode = false;
+    }
   }
   else
   {
@@ -272,7 +287,7 @@ void selection()
         (menuItems[currentMenuIdx].functionPtr)();
       }
     }
-    currentMenuIdx = seletIndicator + scrollIndex;
+    currentMenuIdx = seletIndicator + scrollIndex-1;
     if (currentMenuLevel >= MAX_LEVEL )
     {
       currentMenuLevel = MENU_LEVEL_0; 
@@ -285,27 +300,11 @@ void selection()
 }
 
 
-void diagO2Sensor(void)
-{
-  #if SERIAL_PRINTS
-  Serial.println("we are in diagO2Sensor");
-  #endif
-}
-void diagAds1115(void)
-{
-  #if SERIAL_PRINTS
-    Serial.println("we are in diagAds1115");
-  #endif 
-}
-void diagSolStatus(void)
-{
-    Serial.println("we are in diagSolStatus");
-}
 
 void Diagnostics_Mode(void)
 {
   Serial.println("in Diagnostics_Mode");
-  while(1)
+  while(continue_diag_mode)
   {
     RT_Events_T eRTState = RT_NONE;
     if (!Menu_Sel)
@@ -316,7 +315,7 @@ void Diagnostics_Mode(void)
     }
     eRTState = Encoder_Scan();
     #if SERIAL_PRINTS
-    Serial.println(eRTState);
+    Serial.print("in Diagnostics_Mode");Serial.println(eRTState);
     #endif
     switch(eRTState)
     {
@@ -331,4 +330,89 @@ void Diagnostics_Mode(void)
          break;
     }
   }
+}
+
+int initSelect = 0;
+void move_up_init()
+{
+  lcd.setCursor(0,1);
+  lcd.print(">>Edit parameters");
+  lcd.setCursor(0,2);
+  lcd.print("  Enter Diagnostics");
+  initSelect = 1;
+}
+
+void move_down_init()
+{
+  lcd.setCursor(0,1);
+  lcd.print("  Edit parameters");
+  lcd.setCursor(0,2);
+  lcd.print(">>Enter Diagnostics");
+  initSelect = 2;
+}
+
+void selection_init()
+{
+  if  (initSelect == 1)
+  {
+    editMode();
+  }
+  else if (initSelect == 2)
+  {
+    Diagnostics_Mode();
+  }
+  initSelect = 0;
+}
+
+void displayInitialScreen()
+{
+  boolean continueLoop = true;
+  int wait = 599;
+  RT_Events_T eRTState = RT_NONE;
+  encoderScanUnblocked();
+  encoderScanUnblocked();
+  encoderScanUnblocked();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Rotate encoder");
+  lcd.setCursor(0,1);
+  lcd.print("  Edit parameters");
+  lcd.setCursor(0,2);
+  lcd.print("  Enter Diagnostics");
+  while( wait>0 )
+  {
+    eRTState = encoderScanUnblocked();
+    if (eRTState != RT_NONE)
+    {
+      break;
+    }
+    lcd.setCursor(0,3);
+    lcd.print(wait/100);
+    delay (10);
+    wait--;
+  }
+  if (eRTState != RT_NONE)
+  {
+    while (continueLoop)
+    {
+      eRTState = Encoder_Scan();
+      #if SERIAL_PRINTS
+      Serial.print("in displayInitialScreen input received");Serial.println(eRTState);
+      #endif
+      switch(eRTState)
+      {
+        case RT_INC:
+           move_up_init();
+           break;
+        case   RT_DEC:
+           move_down_init();
+           break;
+        case   RT_BT_PRESS:
+           selection_init();
+           continueLoop = false;
+           break;
+      }
+    }
+  }
+  Serial.println("exited displayInitialScreen");
 }
