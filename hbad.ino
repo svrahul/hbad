@@ -23,6 +23,7 @@ int lastCLK = 0;
 String saveFlag = "Save  ";
 String cancelFlag = "Cancel";
 int currentSaveFlag = 1;
+int gCtrlParamUpdated = 0;
 #define ROT_ENC_FOR_IER (currPos == inex_rati.index)
 #define ROT_ENC_FOR_PEEP (currPos == peep_pres.index)
 
@@ -41,6 +42,7 @@ void setup() {
   Wire.begin();
   hbad_mem.begin();
   Serial.begin(9600);
+  Serial3.begin(9600);
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
   setup_calib_calc_m_c();
@@ -67,6 +69,17 @@ void loop() {
   saveSelectedParam();
   if (!actionPending) {
     delay(1000);
+  }
+
+  if(gSensorDataUpdated ==1)
+  {
+    gSensorDataUpdated = 0;
+    UART3_SendDAQDataGraphicDisplay(SENSORS_DATA);
+  }
+  if(gCtrlParamUpdated == 1)
+  {
+    gCtrlParamUpdated = 0;
+    UART3_SendDAQDataGraphicDisplay(PARAMS_DATA);
   }
 }
 void sendCommands() {
@@ -319,3 +332,48 @@ void processRotationInSelectedMode() {
     delay(25);
   }
 }
+
+void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
+ {
+  int sendDataLen = 0;
+  unsigned short int crc16Val=0;
+  if(ePacketType == SENSORS_DATA)
+  {
+    u8TxBuffer[PACKET_LEN_INDEX] = TOTAL_SENSORS_PACKET_LEN;
+    u8TxBuffer[FUNCTION_CODE_INDEX] = SENSORS_DATA_FC;
+    u8TxBuffer[NUMBER_ELEMENTS_INDEX] = TOTAL_NUMBER_OF_SENSORS;
+    for(int i=0; i<TOTAL_NUMBER_OF_SENSORS; i++)
+    {
+      u8TxBuffer[DATA_PAYLOAD_INDEX+i*2] = (unsigned char)(((sensorOutputData[i].unitX10 & 0xFF00)>>8) & 0x00FF);
+      u8TxBuffer[DATA_PAYLOAD_INDEX+i*2+1] = (unsigned char)(sensorOutputData[i].unitX10 & 0x00FF);
+    }
+    sendDataLen = TOTAL_SENSORS_PACKET_LEN;
+  }
+  else if(ePacketType == PARAMS_DATA)
+  {
+    u8TxBuffer[PACKET_LEN_INDEX] = TOTAL_PARAMS_PACKET_LEN;
+    u8TxBuffer[FUNCTION_CODE_INDEX] = PARAMETERS_DATA_FC;
+    u8TxBuffer[NUMBER_ELEMENTS_INDEX] = TOTAL_NUMBER_OF_PARAMS;
+    for(int i=0; i<TOTAL_NUMBER_OF_PARAMS; i++)
+    {
+      u8TxBuffer[DATA_PAYLOAD_INDEX+i*2] = (unsigned char)(((params[i].value_curr_mem & 0xFF00)>>8) & 0x00FF);
+      u8TxBuffer[DATA_PAYLOAD_INDEX+i*2+1] = (unsigned char)(params[i].value_curr_mem & 0x00FF);
+    }
+    sendDataLen = TOTAL_PARAMS_PACKET_LEN;    
+  }
+  else
+  {
+    sendDataLen = 0;
+    /*packet type unknown .. ignore it*/
+  }
+
+  if(sendDataLen != 0)
+  {
+    crc16Val = crc16(u8TxBuffer, u8TxBuffer[PACKET_LEN_INDEX]-2);
+    u8TxBuffer[SENSORS_CRC_2B_INDEX] = (unsigned char)(((crc16Val & 0xFF00)>>8) & 0x00FF);
+    u8TxBuffer[SENSORS_CRC_2B_INDEX+1] = (unsigned char)(crc16Val & 0x00FF);
+    Serial3.write(u8TxBuffer, sendDataLen);
+  }
+  
+ }
+

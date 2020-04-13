@@ -24,8 +24,8 @@ typedef struct {
 }sensorDataT;
 
 typedef struct{
-  int mV;
-  int unitX10;
+  unsigned int mV;
+  unsigned int unitX10;
 }sensorOutputDataT;
 
 /*
@@ -33,6 +33,7 @@ typedef struct{
  */
 sensorOutputDataT sensorOutputData[NUM_OF_SENSORS];
 
+int gSensorDataUpdated =0;
 
 //slope(m) and constant(c) for all the sensors.
 float m_o2, c_o2, m_pg1, c_pg1, m_pg2, c_pg2, m_dpg1, c_dpg1, m_dpg2, c_dpg2;
@@ -110,7 +111,7 @@ void setup_calib_calc_m_c() {
   }
   Serial.println("Done calib_calc_m_c setup!");
   calc_m_c_for_all_sensors();
-  //ADS1115_init();
+  ADS1115_init();
 }
 
 /*
