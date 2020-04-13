@@ -188,6 +188,9 @@ int processRotation() {
           newPeep = rectifyBoundaries(newPeep + cursorIndex * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
           params[peep_pres.index].value_new_pot = newPeep;
           lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+          if(newPeep<10){
+            lcd.print(" ");
+          }
           lcd.print(newPeep);
           retVal = newPeep;
         }
@@ -212,11 +215,19 @@ void showSelectedParam() {
     }
     params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
     lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-    float actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
+    int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
     lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-    lcd.print(actualValue, 2);
+    if(actualValue<100){
+      lcd.print(" ");
+    }
+    lcd.print(actualValue);
+    lcd.setCursor(15, 1);
+    lcd.print(params[currPos].units);
     lcd.setCursor(VALUE1_DISPLAY_POS, 2);
-    float storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
+    int storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
+    if(storedValue<100){
+      lcd.print(" ");
+    }
     lcd.print(storedValue);
     lcd.setCursor(14, 3);
     if (currentSaveFlag == 1) {
@@ -235,7 +246,7 @@ void saveSelectedParam() {
     lcd.setCursor(0, 3);
     lcd.print(params[currPos].parm_name);
     if (currentSaveFlag == 0) {
-      lcd.print(" not saved.....   ");
+      lcd.print(" edit cancelled.....   ");
     } else {
       storeParam(params[currPos]);
       params[currPos].value_curr_mem = params[currPos].value_new_pot;
@@ -305,6 +316,6 @@ void processRotationInSelectedMode() {
     }
     lastCLK = currentStateCLK;
     lastRotateTime = rotateTime;
-    delay(50);
+    delay(25);
   }
 }

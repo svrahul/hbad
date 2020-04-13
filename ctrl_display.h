@@ -2,7 +2,7 @@
 
 #define MAX_CTRL_PARAMS sizeof(params) / sizeof(params[0])
 #define DBNC_INTVL_SW 500 // millisecs before switch debounce
-#define DBNC_INTVL_ROT 150 // millisecs before rotation debounce
+#define DBNC_INTVL_ROT 100 // millisecs before rotation debounce
 #define MAX_IDLE_AFTER_SEL 10000000 //uSecs
 #define POT_TURN_MAX_WAIT_MILLIS 2000
 #define DISPLAY_MODE 0
@@ -41,12 +41,12 @@ struct ctrl_parameter_t {
 
 const ctrl_parameter_t tidl_volu = {0, "TV", TIDAL_VOLUME_PIN,
                                     200, 600,
-                                    "ml", 50,
+                                    "ml   ", 50,
                                     0, 0
                                    };
 const ctrl_parameter_t resp_rate =    {1, "RR", RR_PIN,
                                        5, 35,
-                                       "BPM", 1,
+                                       "BPM  ", 1,
                                        0, 0
                                       };
 const ctrl_parameter_t peak_press =   {2, "OP", PMAX_PIN,
@@ -56,7 +56,7 @@ const ctrl_parameter_t peak_press =   {2, "OP", PMAX_PIN,
                                       };
 const ctrl_parameter_t fio2_perc =    {3, "O2", FiO2_PIN,
                                        20, 100,
-                                       "%", 20,
+                                       "%    ", 20,
                                        0, 0
                                       };
 const ctrl_parameter_t inex_rati =    {4, "IE", DISP_ENC_CLK, //READ THROUGH ENCODER
