@@ -67,21 +67,23 @@ void displayRunTime()
 
   lcd.setCursor(0,1);
   lcd.print("TV:");
-  lcd.print(tidl_volu.value_curr_mem);
+  lcd.print(params[0].value_curr_mem);
+ //lcd.print(getCalibratedParam(params[0])); 
 
   lcd.setCursor(7,1);
   lcd.print("RR:");
-  lcd.print(resp_rate.value_curr_mem);
+ lcd.print(params[1].value_curr_mem);
+  // lcd.print(getCalibratedParam(params[0])); 
 
   lcd.setCursor(13,1);
   lcd.print("IER:");
-  lcd.print(inex_rati.value_curr_mem);
+  lcd.print(params[4].value_curr_mem);
 
 
   lcd.setCursor(0,2);
   lcd.print("PP:");
-  lcd.print(peep_pres.value_curr_mem);
-  
+  lcd.print(params[2].value_curr_mem);
+  // lcd.print(getCalibratedParam(params[2])); 
   lcd.setCursor(6,2);
   lcd.print("O2:");
   lcd.print((PS_ReadSensorValueX10(O2))/10);
@@ -201,7 +203,7 @@ void listDisplayMode() {
         doNotSkipCalib = false;
       }
       if (doNotSkipCalib) {
-        lcd.print(getCalibratedParam(params[i]));
+        lcd.print(params[i].value_curr_mem);
       } else {
         if (i == inex_rati.index) {
           lcd.print("1:");
@@ -214,7 +216,7 @@ void listDisplayMode() {
       lcd.print(params[i + 1].parm_name);
       lcd.setCursor(VALUE2_DISPLAY_POS, nextLine);
       if (doNotSkipCalib) {
-        lcd.print(getCalibratedParam(params[i + 1]));
+        lcd.print(params[i + 1].value_curr_mem);
       } else {
         if ((i + 1) == inex_rati.index) {
           lcd.print("1:");
@@ -276,9 +278,11 @@ int processRotation() {
           lcd.print(newIER);
           retVal = newIER;
           params[inex_rati.index].value_new_pot = newIER;
+          params[inex_rati.index].value_curr_mem = newIER;
         } else if (ROT_ENC_FOR_PEEP) {
           newPeep = rectifyBoundaries(newPeep + cursorIndex * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
           params[peep_pres.index].value_new_pot = newPeep;
+          params[peep_pres.index].value_curr_mem = newPeep;
           lcd.setCursor(VALUE1_DISPLAY_POS, 1);
           if(newPeep<10){
             lcd.print(" ");
@@ -317,11 +321,13 @@ void showSelectedParam() {
     lcd.setCursor(15, 1);
     lcd.print(params[currPos].units);
     lcd.setCursor(VALUE1_DISPLAY_POS, 2);
-    int storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
-    if(storedValue<100){
+//    int storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
+    if(params[currPos].value_curr_mem<10){
+      lcd.print("  ");
+    }else if(params[currPos].value_curr_mem<100){
       lcd.print(" ");
     }
-    lcd.print(storedValue);
+    lcd.print(params[currPos].value_curr_mem);
     lcd.setCursor(14, 3);
     if (currentSaveFlag == 1) {
       lcd.print(saveFlag);
@@ -342,9 +348,8 @@ void saveSelectedParam() {
     if (currentSaveFlag == 0) {
       lcd.print(" edit cancelled.....   ");
     } else {
+      params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
-      params[currPos].value_curr_mem = params[currPos].value_new_pot;
-      //    Serial.println(params[currPos].value_curr_mem);
       lcd.print(" saved.....");
     }
     actionPending = false;
@@ -379,8 +384,8 @@ int getCalibValue(int potValue, int paramIndex) {
 /*
    The below method is for a specific parameter
 */
-int getCalibratedParam(ctrl_parameter_t param) {
-  float convVal = map(param.value_curr_mem, 0, POT_HIGH, param.min_val, param.max_val);
+int getCalibratedParamFromPot(ctrl_parameter_t param) {
+  float convVal = map(param.value_new_pot, 0, POT_HIGH, param.min_val, param.max_val);
   return ((int)(convVal / param.incr) + 1) * param.incr;
 }
 

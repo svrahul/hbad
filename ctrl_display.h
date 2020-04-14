@@ -1,7 +1,8 @@
 //Author: Venkata Rahul S, Team HBAD, 28-3-2020
 
 #define MAX_CTRL_PARAMS 6
-//#define MAX_CTRL_PARAMS sizeof(params) / sizeof(params[0])
+
+//#define MAX_CTRL_PARAMS sizeof(params)/ sizeof(params[0])
 #define DBNC_INTVL_SW 500 // millisecs before switch debounce
 #define DBNC_INTVL_ROT 100 // millisecs before rotation debounce
 #define MAX_IDLE_AFTER_SEL 10000000 //uSecs
