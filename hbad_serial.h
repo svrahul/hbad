@@ -46,8 +46,8 @@ typedef enum
 /*Global TX Buffer for sending the data over UART3 to Graphics display  module */
 unsigned char u8TxBuffer[TOTAL_PACKET_LEN];
 
- void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType);
-  unsigned short crc16(unsigned char *data_p, unsigned short length);
+void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType);
+unsigned short crc16(unsigned char *data_p, unsigned short length);
  
 #define POLY 0x8408
 /*

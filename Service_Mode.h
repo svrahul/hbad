@@ -50,7 +50,7 @@ int scrollIndex = 0;
 
 #define MAIN_MENU_LENGTH 4
 #define SUB_MENU1_LENGTH 6
-#define SUB_MENU2_LENGTH 5
+#define SUB_MENU2_LENGTH 2
 #define SUB_MENU3_LENGTH 4
 
 
@@ -58,7 +58,7 @@ int scrollIndex = 0;
 
 char* mainMenu[MAIN_MENU_LENGTH] = {" exit diag mode", " O2-Calib"," Check ADS1115"," Read SOL"};
 char* subMenu1[SUB_MENU1_LENGTH] = {" go back", " O2 0%"," O2 21.6%"," O2 28%", " O2 40%"," O2 100%"};
-char* subMenu2[SUB_MENU2_LENGTH] = {" go back", " Read PS1"," Read PS2"," Read DPS1"," Read DPS2"};
+char* subMenu2[SUB_MENU2_LENGTH] = {" go back", " validate ADC"};
 char* subMenu3[SUB_MENU3_LENGTH] = {" go back", " Read SOL1"," Read SOL2"," Read SOL3"};
 
 void diagO2Sensor(void);

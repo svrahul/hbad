@@ -95,20 +95,8 @@ void displayRunTime()
   lcd.print(PS_ReadSensorValueX10(PS2)/10);
 }
 
-
-void loop() {
-  RT_Events_T eRTState;
-  displayRunTime();
-  eRTState = encoderScanUnblocked();
-  if (eRTState == RT_BT_PRESS)
-  {
-    Serial.println("Entering Edit mode!");
-    MsTimer2::stop();
-    editMode();
-    MsTimer2::start();
-    runInitDisplay = true;
-  }
-  delay (50);
+void checkSendDataToGraphicsDisplay()
+{
   if(gSensorDataUpdated ==1)
   {
     gSensorDataUpdated = 0;
@@ -120,6 +108,33 @@ void loop() {
     UART3_SendDAQDataGraphicDisplay(PARAMS_DATA);
   }
 }
+#define LCD_DISP_REFRESH_COUNT 5
+#define EDIT_MODE_TIMEOUT 5000
+int lcdRunTimerRefreshCount =0;
+void loop() {
+  RT_Events_T eRTState;
+  if(gSensorDataUpdated ==1)
+  {
+    lcdRunTimerRefreshCount++;
+    if(lcdRunTimerRefreshCount == LCD_DISP_REFRESH_COUNT)
+    {
+      displayRunTime();
+      lcdRunTimerRefreshCount = 0;
+    }
+    checkSendDataToGraphicsDisplay();
+  }
+  eRTState = encoderScanUnblocked();
+  if (eRTState == RT_BT_PRESS)
+  {
+    Serial.println("Entering Edit mode!");
+    MsTimer2::stop();
+    editMode();
+    gCtrlParamUpdated = 1;
+    MsTimer2::start();
+    runInitDisplay = true;
+  }
+ // delay (20);
+}
 
 void editMode()
 {
@@ -129,7 +144,9 @@ void editMode()
   do{
     //  sendCommands();
     announce();
-    delay(100);
+    saveSensorData();
+    checkSendDataToGraphicsDisplay();
+    
     //  Serial.println("currPos before\t");
     //  Serial.println(currPos);
     processRotation();
@@ -140,7 +157,7 @@ void editMode()
     if (!actionPending) {
       delay(1000);
     }
-  }while ((millis() - resetEditModetime) < 5000);
+  }while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
 }
 
 void sendCommands() {
@@ -405,9 +422,9 @@ void displayChannelData(sensor_e sensor)
 {
   int o2mVReading, o2Unitx10;
   RT_Events_T eRTState = RT_NONE;
- // #if SERIAL_PRINTS
+  #if SERIAL_PRINTS
   Serial.println("we are in diagO2Sensor");
- // #endif
+  #endif
   
   lcd.clear();
   lcd.setCursor(0,0);
@@ -469,6 +486,13 @@ void diagO2Sensor(void)
 void diagAds1115(void)
 {
   displayChannelData(PS1);
+  displayChannelData(PS2);
+  displayChannelData(DPS1);
+  displayChannelData(DPS2);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Ads1115 validated");
+  delay(2000);
 }
 void diagSolStatus(void)
 {

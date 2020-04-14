@@ -401,4 +401,5 @@ void saveSensorData(void)
   timeUs = micros()-timeUs;
   Serial.print("done in ");Serial.println(timeUs);
   #endif
+  gSensorDataUpdated = 1;
 }
