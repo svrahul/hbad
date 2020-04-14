@@ -303,6 +303,8 @@ int processRotation() {
 }
 
 void showSelectedParam() {
+  int currentStateCLK = digitalRead(DISP_ENC_CLK);
+
   while (switchMode == PAR_SELECTED_MODE) {
     actionPending = true;
     lcd.setCursor(NAME1_DISPLAY_POS, 1);
@@ -329,6 +331,13 @@ void showSelectedParam() {
     }
     lcd.print(params[currPos].value_curr_mem);
     lcd.setCursor(14, 3);
+    currentStateCLK = digitalRead(DISP_ENC_CLK);
+    if (currentStateCLK != lastCLK) {
+      currentSaveFlag = 1 - currentSaveFlag;
+      resetEditModetime=millis();
+      return;
+    }
+    lastCLK = currentStateCLK;
     if (currentSaveFlag == 1) {
       lcd.print(saveFlag);
     } else {
@@ -385,6 +394,9 @@ int getCalibValue(int potValue, int paramIndex) {
    The below method is for a specific parameter
 */
 int getCalibratedParamFromPot(ctrl_parameter_t param) {
+  if(param.readPortNum == DISP_ENC_CLK){
+    return param.value_curr_mem;
+  }
   float convVal = map(param.value_new_pot, 0, POT_HIGH, param.min_val, param.max_val);
   return ((int)(convVal / param.incr) + 1) * param.incr;
 }
