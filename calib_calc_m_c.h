@@ -424,14 +424,14 @@ boolean checkForPs2Dip()
    /*
     * check with previous samples
     */
-   while (int index = 1; index < MAX_PS2_SAMPLES; index++)
+   for (int index = 1; index < MAX_PS2_SAMPLES; index++)
    {
      previousIndex = ps2SamplesIndex - index;
      if (previousIndex < 0)
      {
        previousIndex += MAX_PS2_SAMPLES;
      }
-     diffArray[index] = ps2Samples[previousIndex] - ps2Samples[ps2SamplesIndex]
+     diffArray[index] = ps2Samples[previousIndex] - ps2Samples[ps2SamplesIndex];
    }
 
    /*
@@ -446,7 +446,7 @@ boolean checkForPs2Dip()
     * increment index and be ready for next cycle.
     */
    ps2SamplesIndex++;
-   if ps2SamplesIndex >= MAX_PS2_SAMPLES;
+   if (ps2SamplesIndex >= MAX_PS2_SAMPLES);
    {
      ps2SamplesIndex = 0;
    }
