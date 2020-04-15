@@ -59,44 +59,63 @@ void displayRunTime()
   if (runInitDisplay)
   {
     lcd.clear();
-    lcd.setCursor(0,0);
+    lcd.setCursor(0, 0);
     lcd.print("RunTime parameters");
     runInitDisplay = false;
   }
-  cleanRow(1);cleanRow(2);cleanRow(3);
+  // cleanRow(1); cleanRow(2); cleanRow(3);
+  String row1 = "TV:";
+  row1 += tidl_volu.value_curr_mem;
+  while (row1.length() != 6)
+  {
+    row1 += " ";
+  }
+  row1 += "RR:";
+  row1 += resp_rate.value_curr_mem;
+  while (row1.length() != 11)
+  {
+    row1 += " ";
+  }
+  row1 += " IER:";
+  row1 += inex_rati.value_curr_mem;
+  while (row1.length() != 20)
+  {
+    row1 += " ";
+  }
+  lcd.setCursor(0, 1);
+  lcd.print(row1);
 
-  lcd.setCursor(0,1);
-  lcd.print("TV:");
-  lcd.print(params[0].value_curr_mem);
- //lcd.print(getCalibratedParam(params[0])); 
+  String row2 = "PP:";
+  row2 += peep_pres.value_curr_mem;
+  while (row2.length() != 6)
+  {
+    row2 += " ";
+  }
+  row2 += "O2:";
+  row2 += (PS_ReadSensorValueX10(O2)) / 10;
+  while (row2.length() != 12)
+  {
+    row2 += " ";
+  }
+  row2 += "IP:";
+  row2 += PS_ReadSensorValueX10(PS1) / 10;
+  while (row2.length() != 20)
+  {
+    row2 += " ";
+  }
+  lcd.setCursor(0, 2);
+  lcd.print(row2);
 
-  lcd.setCursor(7,1);
-  lcd.print("RR:");
- lcd.print(params[1].value_curr_mem);
-  // lcd.print(getCalibratedParam(params[0])); 
 
-  lcd.setCursor(13,1);
-  lcd.print("IER:");
-  lcd.print(params[4].value_curr_mem);
-
-
-  lcd.setCursor(0,2);
-  lcd.print("PP:");
-  lcd.print(params[2].value_curr_mem);
-  // lcd.print(getCalibratedParam(params[2])); 
-  lcd.setCursor(6,2);
-  lcd.print("O2:");
-  lcd.print((PS_ReadSensorValueX10(O2))/10);
-
-  lcd.setCursor(12,2);
-  lcd.print("IP:");
-  lcd.print(PS_ReadSensorValueX10(PS1)/10);
-
-  lcd.setCursor(0,3);
-  lcd.print("EP:");
-  lcd.print(PS_ReadSensorValueX10(PS2)/10);
-}
-
+  String row3 = "EP:";
+  row3 += PS_ReadSensorValueX10(PS2) / 10;
+  while (row3.length() != 7)
+  {
+    row3 += " ";
+  }
+  lcd.setCursor(0, 3);
+  lcd.print(row3);
+} 
 void checkSendDataToGraphicsDisplay()
 {
   if(gSensorDataUpdated ==1)
