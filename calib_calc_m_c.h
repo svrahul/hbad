@@ -403,3 +403,51 @@ void saveSensorData(void)
   #endif
   gSensorDataUpdated = 1;
 }
+
+#define MAX_PS2_SAMPLES 10
+#define THRESHOLD_COMPARE_INDEX 2
+#define DIP_THRESHOLD 5 //better to be lower than PEEP
+
+static int ps2Samples[MAX_PS2_SAMPLES];
+static int diffArray[MAX_PS2_SAMPLES];
+static int ps2SamplesIndex = 0;
+boolean checkForPs2Dip()
+{
+  int previousIndex;
+  boolean dipDetected = false;
+
+  /*
+   * update data in buffer
+   */
+   ps2Samples[ps2SamplesIndex] = sensorOutputData[PS2].unitX10;
+
+   /*
+    * check with previous samples
+    */
+   while (int index = 1; index < MAX_PS2_SAMPLES; index++)
+   {
+     previousIndex = ps2SamplesIndex - index;
+     if (previousIndex < 0)
+     {
+       previousIndex += MAX_PS2_SAMPLES;
+     }
+     diffArray[index] = ps2Samples[previousIndex] - ps2Samples[ps2SamplesIndex]
+   }
+
+   /*
+    * compare against threshold
+    */
+   if (diffArray[THRESHOLD_COMPARE_INDEX] < DIP_THRESHOLD)
+   {
+     dipDetected = true;
+   }
+   
+   /*
+    * increment index and be ready for next cycle.
+    */
+   ps2SamplesIndex++;
+   if ps2SamplesIndex >= MAX_PS2_SAMPLES;
+   {
+     ps2SamplesIndex = 0;
+   }
+}

@@ -40,13 +40,13 @@ float Pressure;
 //#define DPS1  2
 //#define DPS2  3
 
-#define NUM_OF_SENSORS 5
 typedef enum{
   PS1,
   PS2,
   DPS1,
   DPS2,
   O2,
+  NUM_OF_SENSORS,
 }sensor_e;
 
 float ADC_ReadVolageOnATMega2560(int Channel);

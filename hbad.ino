@@ -117,6 +117,7 @@ void loop() {
   RT_Events_T eRTState;
   if(gSensorDataUpdated ==1)
   {
+    //checkForPs2Dip();
     lcdRunTimerRefreshCount++;
     if(lcdRunTimerRefreshCount == LCD_DISP_REFRESH_COUNT)
     {
