@@ -7,6 +7,9 @@
 #define AVOID_EEPROM 0
 #define DEBUG_PRINTS 0
 
+#define MAX_PS2_SAMPLES 10
+#define THRESHOLD_COMPARE_INDEX 2
+#define DIP_THRESHOLD 5 //better to be lower than PEEP
 
 
 
@@ -57,7 +60,9 @@ int * addr_o2_y_data = EEPROM_O2_CALIB_ADDR;
 int * addr_pg1_y_data = EEPROM_PG1_CALIB_ADDR;
 #endif
 
-
+static int ps2Samples[MAX_PS2_SAMPLES];
+static int diffArray[MAX_PS2_SAMPLES];
+static int ps2SamplesIndex = 0;
 
 
 
@@ -402,24 +407,25 @@ void saveSensorData(void)
   Serial.print("done in ");Serial.println(timeUs);
   #endif
   gSensorDataUpdated = 1;
+  /*
+  * increment index and be ready for next cycle.
+  */
+  ps2SamplesIndex++;
+  if (ps2SamplesIndex >= MAX_PS2_SAMPLES);
+  {  	
+    ps2SamplesIndex = 0;
+  }
+  /*
+   * update data in buffer
+  */
+  ps2Samples[ps2SamplesIndex] = sensorOutputData[PS2].unitX10;
 }
 
-#define MAX_PS2_SAMPLES 10
-#define THRESHOLD_COMPARE_INDEX 2
-#define DIP_THRESHOLD 5 //better to be lower than PEEP
 
-static int ps2Samples[MAX_PS2_SAMPLES];
-static int diffArray[MAX_PS2_SAMPLES];
-static int ps2SamplesIndex = 0;
 boolean checkForPs2Dip()
 {
   int previousIndex;
   boolean dipDetected = false;
-
-  /*
-   * update data in buffer
-   */
-   ps2Samples[ps2SamplesIndex] = sensorOutputData[PS2].unitX10;
 
    /*
     * check with previous samples
@@ -439,15 +445,6 @@ boolean checkForPs2Dip()
     */
    if (diffArray[THRESHOLD_COMPARE_INDEX] < DIP_THRESHOLD)
    {
-     dipDetected = true;
-   }
-   
-   /*
-    * increment index and be ready for next cycle.
-    */
-   ps2SamplesIndex++;
-   if (ps2SamplesIndex >= MAX_PS2_SAMPLES);
-   {
-     ps2SamplesIndex = 0;
+     dipDetected = true;     
    }
 }

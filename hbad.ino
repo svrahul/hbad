@@ -9,6 +9,7 @@
 #include "./libraries/MsTimer2/MsTimer2.h"
 #include "./libraries/MsTimer2/MsTimer2.cpp"
 #include "Service_Mode.h"
+#include "Control_StateMachine.h"
 
 volatile short currPos = 1;
 unsigned short newIER = 1;
@@ -31,6 +32,35 @@ int gCtrlParamUpdated = 0;
                            && (currPos >=0 && (currPos < MAX_CTRL_PARAMS) \
                                && (params[currPos].readPortNum == DISP_ENC_CLK)))
 
+#define LCD_DISP_REFRESH_COUNT 5
+#define EDIT_MODE_TIMEOUT 5000
+#define SEND_CTRL_PARAMS_COUNT 15
+#define SEND_SENSOR_VALUES_COUNT 5
+
+int lcdRunTimerRefreshCount =0;
+int ContrlParamsSendCount = 0;
+int SensorValuesSendCount = 0;
+
+// Control statemachine gloabl variable
+ControlStatesDef_T geCtrlState = CTRL_INIT;
+ControlStatesDef_T geCtrlPrevState  = CTRL_INIT;
+bool bSendInitCommand = true;
+//Need to Integrate into Main Code
+bool compressionCycle = false;
+bool expansionCycle = false;
+bool homeCycle = false;
+String rxdata;
+int comcnt;
+#define SYNCH "SY"
+#define ALLPARAM "AA"
+#define VENTSLAVE "VS"
+#define ALLSENSORS "SS"
+#define SINGLEPARAM "SP"
+
+bool gCntrlSerialEventRecvd = false;
+bool bSendPeakHighDetected = false;
+bool bSendPeepLowDetected = false;
+bool bBreathDetectedFlag = false;
 
 void setup() {
   
@@ -43,6 +73,7 @@ void setup() {
   Wire.begin();
   hbad_mem.begin();
   Serial.begin(9600);
+  Serial2.begin(9600);
   Serial3.begin(9600);
   attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
@@ -116,22 +147,10 @@ void displayRunTime()
   lcd.setCursor(0, 3);
   lcd.print(row3);
 } 
-void checkSendDataToGraphicsDisplay()
-{
-  if(gSensorDataUpdated ==1)
-  {
-    gSensorDataUpdated = 0;
-    UART3_SendDAQDataGraphicDisplay(SENSORS_DATA);
-  }
-  if(gCtrlParamUpdated == 1)
-  {
-    gCtrlParamUpdated = 0;
-    UART3_SendDAQDataGraphicDisplay(PARAMS_DATA);
-  }
-}
-#define LCD_DISP_REFRESH_COUNT 5
-#define EDIT_MODE_TIMEOUT 5000
-int lcdRunTimerRefreshCount =0;
+
+
+/* Project Main loop */
+ 
 void loop() {
   RT_Events_T eRTState;
   if(gSensorDataUpdated ==1)
@@ -143,8 +162,9 @@ void loop() {
       displayRunTime();
       lcdRunTimerRefreshCount = 0;
     }
-    checkSendDataToGraphicsDisplay();
+    checkSendDataToGraphicsDisplay();    
   }
+  
   eRTState = encoderScanUnblocked();
   if (eRTState == RT_BT_PRESS)
   {
@@ -155,7 +175,12 @@ void loop() {
     MsTimer2::start();
     runInitDisplay = true;
   }
- // delay (20);
+  if (gCntrlSerialEventRecvd == true)
+  {
+    gCntrlSerialEventRecvd = false;
+    Ctrl_ProcessRxData();
+  }
+  Ctrl_StateMachine_Manager();
 }
 
 void editMode()
@@ -167,8 +192,6 @@ void editMode()
     //  sendCommands();
     announce();
     saveSensorData();
-    checkSendDataToGraphicsDisplay();
-    
     //  Serial.println("currPos before\t");
     //  Serial.println(currPos);
     processRotation();
@@ -182,24 +205,7 @@ void editMode()
   }while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
 }
 
-void sendCommands() {
-  String oprName = "P";
-  String command;
-  char paddedValue[3];
-  for (int i = 0; i < MAX_CTRL_PARAMS - 2; i++) {
-    // padding(params[i].value_curr_mem, 4 );
-    command = START_DELIM;
-    command += VENT_MAST;
-    command += oprName + i;
-    sprintf(paddedValue, "%04d",
-            params[i].value_curr_mem);
-    command += paddedValue;
-    command += END_DELIM;
-    Serial.println(command);
-    delay(3000);
-  }
 
-}
 void announce() {
   if (announced == 0) {
     listDisplayMode();
@@ -536,6 +542,24 @@ void diagSolStatus(void)
     Serial.println("we are in diagSolStatus");
 }
 
+void checkSendDataToGraphicsDisplay(void)
+{
+  /*Send control set parameters to graphics module */
+  ContrlParamsSendCount++;
+  if(ContrlParamsSendCount > SEND_CTRL_PARAMS_COUNT)
+  {
+    ContrlParamsSendCount = 0;
+    UART3_SendDAQDataGraphicDisplay(PARAMS_DATA);
+  }    
+  /*Send Sensor Values parameters to graphics module */
+  SensorValuesSendCount++;
+  if(SensorValuesSendCount > SEND_SENSOR_VALUES_COUNT)
+  {
+    SensorValuesSendCount = 0;
+    UART3_SendDAQDataGraphicDisplay(SENSORS_DATA);
+  }
+}
+
 void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
  {
   int sendDataLen = 0;
@@ -577,5 +601,168 @@ void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
     u8TxBuffer[SENSORS_CRC_2B_INDEX+1] = (unsigned char)(crc16Val & 0x00FF);
     Serial3.write(u8TxBuffer, sendDataLen);
   }
-  
- }
+
+}
+
+void serialEvent2() {
+  while (Serial2.available()) {
+    char inChar = (char)Serial2.read();
+    if (inChar == '$') {
+      comcnt = 1;
+      rxdata = "";
+    }
+    if  (comcnt >= 1) {
+      rxdata += inChar;
+      comcnt = comcnt + 1;
+      if (inChar == '&') {
+        if (comcnt >= 10) {
+          gCntrlSerialEventRecvd = true;
+        }
+      }
+    }
+  }
+}
+
+void Ctrl_ProcessRxData(void) {
+  String p1;
+  String p2;
+  String p3;
+  String p4;
+  String payload;
+  String command;
+
+  p1 = rxdata.substring(1, 3);
+  p2 = rxdata.substring(3, 5);
+  p3 = rxdata.substring(5, 7);
+  p4 = rxdata.substring(7, 9);
+  payload = p3 + p4;
+  // int index = p3.toInt();
+  int value;
+  if (p1 == VENTSLAVE) {
+    if (p2 == SINGLEPARAM ) {
+
+    }
+    else if (p2 == SYNCH) {
+      Serial.println(rxdata);
+      geCtrlState = payload.toInt();
+    }
+    else if (p2 == ALLSENSORS) {
+
+    }
+    else if (p2 == ALLPARAM) {
+
+    }
+    else {
+      int index;
+      index =  payload.toInt();
+      if (index < MAX_CTRL_PARAMS)
+      {
+        value = params[index].value_curr_mem;
+        command = getSensorReading(p2, value);
+        Serial2.print(command);
+      }
+
+    }
+
+  }
+
+}
+/*
+   Function to send  specific the Calibrated Sensor Reading
+*/
+String getSensorReading(String paramName, int value) {
+  String command;
+  char paddedValue[3];
+  command = START_DELIM;
+  command += VENT_MAST;
+  command += paramName;
+  sprintf(paddedValue, "%04d",
+          value);
+  command += paddedValue;
+  command += END_DELIM;
+  return command;
+}
+
+void Ctrl_StateMachine_Manager(void)
+{
+  bool stateChanged = false;
+  switch (geCtrlState)
+  {
+    case CTRL_INIT:
+      {
+        if (bSendInitCommand == true)
+        {
+          bSendInitCommand = false;
+          Serial2.print(commands[INIT_MASTER]);
+          for (int index = 0; index < MAX_PS2_SAMPLES; index++)
+          {
+            ps2Samples[index]= 0xFFFF;
+          }
+        }
+      }
+      break;
+    case CTRL_COMPRESSION:
+      {
+        /*When Peak Pressure Set in the UI is less than the sensor measured Peak PressureValue*/
+        if (sensorOutputData[PS1].unitX10 > (params[PEAK_PRES].value_curr_mem * 10) )
+        {
+          if (bSendPeakHighDetected == false)
+          {
+            bSendPeakHighDetected = true;
+            Serial2.print(commands[INH_SOLE_OFF]);
+          }
+        }
+      }
+      break;
+    case CTRL_COMPRESSION_HOLD:
+      {
+
+      }
+      break;
+    case CTRL_EXPANSION:
+      {
+        /*When Peak Pressure Set in the UI is less than the sensor measured Peak PressureValue*/
+        if (sensorOutputData[PS2].unitX10 < (params[PEEP_PRES].value_curr_mem * 10) )
+        {
+          if (bSendPeepLowDetected == false)
+          {
+            bSendPeepLowDetected = true;
+            Serial2.print(commands[EXH_SOLE_OFF]);
+          }
+        }
+      }
+      break;
+    case CTRL_EXPANSION_HOLD:
+      {
+
+      }
+      break;
+    case CTRL_INHALE_DETECTION:
+      {
+        if (bBreathDetectedFlag == false)
+        {
+          if (checkForPs2Dip())
+          {
+            bBreathDetectedFlag = true;
+            Serial2.print(commands[INIT_BREATH_DET]);
+          }
+        }
+      }
+      break;
+    case CTRL_UNKNOWN_STATE:
+      {
+
+      }
+      break;
+    default:
+      break;
+  }
+  if (geCtrlPrevState != geCtrlState)
+  {
+    geCtrlPrevState = geCtrlState;
+    bSendInitCommand = false;
+    bSendPeakHighDetected = false;
+    bSendPeepLowDetected = false;
+    bBreathDetectedFlag = false;
+  }
+}

@@ -41,6 +41,15 @@ struct ctrl_parameter_t {
   int value_new_pot;
 };
 
+typedef enum
+{
+  TIDAL_VOL=0,
+  BPM,
+  PEAK_PRES,
+  FIO2_PERC,
+  IE_RATIO,
+  PEEP_PRES
+};
 const ctrl_parameter_t tidl_volu = {0, "TV", TIDAL_VOLUME_PIN,
                                     200, 600,
                                     "ml   ", 50,
