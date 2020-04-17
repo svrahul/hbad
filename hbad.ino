@@ -293,6 +293,9 @@ void editParameterMode() {
         lcd.setCursor(NAME1_DISPLAY_POS, 1);
         lcd.print(params[currPos].parm_name);
         if (currPos == inex_rati.index) {
+          if(newIER == 0){
+            newIER = inex_rati.value_curr_mem;
+          }
           lcd.print(" 1:");
           lcd.setCursor(VALUE1_DISPLAY_POS + 2, 1);
           lcd.print(newIER);
@@ -311,25 +314,28 @@ void showSelectedParam() {
 
   while (switchMode == PAR_SELECTED_MODE) {
     actionPending = true;
-    lcd.setCursor(NAME1_DISPLAY_POS, 1);
+    lcd.setCursor(8, 0);
     lcd.print(params[currPos].parm_name);
     if (currPos == inex_rati.index || currPos == peep_pres.index) {
       abc();
       return;
     }
     params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
-    lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+    lcd.setCursor(0, 1);
+    lcd.print("New: ");
+    lcd.print("   ");
+    lcd.setCursor(8, 1);
     int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
-    lcd.setCursor(VALUE1_DISPLAY_POS, 1);
     printPadded(actualValue);
-    lcd.setCursor(10, 1);
+    lcd.setCursor(15, 1);
     lcd.print(params[currPos].units);
-    lcd.setCursor(VALUE1_DISPLAY_POS, 2);
+    lcd.setCursor(0, 2);
+    lcd.print("Old: ");
+    lcd.setCursor(8, 2);
     printPadded(params[currPos].value_curr_mem);
-    lcd.setCursor(10, 2);
+    lcd.setCursor(15, 2);
     lcd.print(params[currPos].units);
     //    int storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
-    lcd.setCursor(14, 3);
     currentCLK = digitalRead(DISP_ENC_CLK);
     if (currentCLK != lastCLK) {
       currentSaveFlag = 1 - currentSaveFlag;
@@ -337,10 +343,15 @@ void showSelectedParam() {
       return;
     }
     lastCLK = currentCLK;
+    lcd.setCursor(0, 3);
     if (currentSaveFlag == 1) {
-      lcd.print(saveFlag);
+      lcd.print(SAVE_FLAG_CHOSEN);
+      lcd.print("    ");
+      lcd.print(CANC_FLAG);
     } else {
-      lcd.print(cancelFlag);
+      lcd.print(SAVE_FLAG);
+      lcd.print("    ");
+      lcd.print(CANC_FLAG_CHOSEN);
     }
     resetEditModetime = millis();
     processRotationInSelectedMode();
@@ -359,24 +370,24 @@ void saveSelectedParam() {
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
        if(params[currPos].parm_name =="IE"){
-        param = "p5";
+        param = "P5";
       }
        command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
-      lcd.print(" saved.....");
+      lcd.print(" saved          ");
        
       return;
     }
     if (currentSaveFlag == 0) {
-      lcd.print(" edit cancelled.....   ");
+      lcd.print(" Edit cancelled..........   ");
     } else {
       
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
       if(params[currPos].parm_name =="TV"){
-        param = "p1";
+        param = "P1";
       }else if(params[currPos].parm_name =="RR"){
-        param = "p2";
+        param = "P2";
       }
       command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
@@ -772,8 +783,8 @@ void Ctrl_StateMachine_Manager(void)
 
 void abc() {
   /*Index_select loop*/
-  unsigned long lastRotateTime = 0;
-  unsigned long rotateTime = millis();
+//  unsigned long lastRotateTime = 0;
+//  unsigned long rotateTime = millis();
   currentCLK = digitalRead(DISP_ENC_CLK);
   while (READ_FROM_ENCODER) {
     currentCLK = digitalRead(DISP_ENC_CLK);
@@ -789,7 +800,7 @@ void abc() {
       resetEditModetime = millis();
     }
     if (ROT_ENC_FOR_IER) {
-      int newIER = rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
+      rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
 //      cleanRow(1);
       lcd.setCursor(VALUE1_DISPLAY_POS, 1);
       lcd.print("1:");
@@ -797,7 +808,7 @@ void abc() {
       params[inex_rati.index].value_new_pot = newIER;
       params[inex_rati.index].value_curr_mem = newIER;
     } else if (ROT_ENC_FOR_PEEP) {
-      int newPeep = rectifyBoundaries(newPeep + incr * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
+      newPeep = rectifyBoundaries(newPeep + incr * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
       params[peep_pres.index].value_new_pot = newPeep;
       params[peep_pres.index].value_curr_mem = newPeep;
       lcd.setCursor(VALUE1_DISPLAY_POS, 1);

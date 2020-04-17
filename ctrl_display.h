@@ -25,10 +25,11 @@
 
 static const int mode_loop_delays[] = {100, 100, 100, 100};
 static const int mode_timeouts[] = {0, 0, 500, 0};
-
+#define EMPTY_TWENTY_STR "                    "
+#define EMPTY_FIVE_STR "     "
 static const char CFG_INDICATOR ((char) 162);
 
-static const String mode_headers[] = {"PRESS SELECT TO EDIT", "TURN KNOB TO SELECT ", "TURN POT TO SELECT  ", "PRESS SELECT TO SAVE"};
+static const String mode_headers[] = {"PRESS SELECT TO EDIT", EMPTY_TWENTY_STR, EMPTY_TWENTY_STR, "PRESS SELECT TO SAVE"};
 struct ctrl_parameter_t {
   unsigned short index;
   String parm_name;
@@ -60,12 +61,12 @@ const ctrl_parameter_t resp_rate =    {1, "RR", RR_PIN,
                                        "BPM  ", 1,
                                        0, 0
                                       };
-const ctrl_parameter_t peak_press =   {2, "OP", PMAX_PIN,
+const ctrl_parameter_t peak_press =   {2, "PAW", PMAX_PIN,
                                        40, 60,
                                        UNIT_CMH2O, 1,
                                        0, 0
                                       };
-const ctrl_parameter_t fio2_perc =    {3, "O2", FiO2_PIN,
+const ctrl_parameter_t fio2_perc =    {3, "FiO2", FiO2_PIN,
                                        20, 100,
                                        "%    ", 20,
                                        0, 0
@@ -82,3 +83,8 @@ const ctrl_parameter_t peep_pres =    {5, "PP", DISP_ENC_CLK, //READ THROUGH ENC
                                       };
 
 static ctrl_parameter_t params[] = {tidl_volu, resp_rate, peak_press, fio2_perc, inex_rati, peep_pres};
+
+#define SAVE_FLAG " SAVE "
+#define SAVE_FLAG_CHOSEN "<SAVE>"
+#define CANC_FLAG " CANCEL "
+#define CANC_FLAG_CHOSEN "<CANCEL>"
