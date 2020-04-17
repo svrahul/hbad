@@ -90,7 +90,7 @@ void setup_calib_calc_m_c() {
   // put your setup code here, to run once:
   boolean default_data_write_to_eeprom_on_first_program_load;
   int index;
-  Serial.println("starting calib_calc_m_c setup!");
+//  Serial.println("starting calib_calc_m_c setup!");
   #if AVOID_EEPROM
   default_data_write_to_eeprom_on_first_program_load = true;
   #else
@@ -111,10 +111,10 @@ void setup_calib_calc_m_c() {
     *(addr_default_data_write_to_eeprom_on_first_program_load)=false;
     #else
     storeCalibParam(addr_default_data_write_to_eeprom_on_first_program_load, false);
-    Serial.println("Default data written to EEPROM");
+//    Serial.println("Default data written to EEPROM");
     #endif
   }
-  Serial.println("Done calib_calc_m_c setup!");
+//  Serial.println("Done calib_calc_m_c setup!");
   calc_m_c_for_all_sensors();
   ADS1115_init();
 }
@@ -141,10 +141,10 @@ void calib_calculate_m_c(unsigned int numOfSamples, int *x_val, int * addr, floa
     addr+=1;
     
     #if DEBUG_PRINTS
-      Serial.print("addr ");Serial.print((int)addr, HEX);Serial.print(" = ");
+//      Serial.print("addr ");Serial.print((int)addr, HEX);Serial.print(" = ");
       //Serial.print(value2, DEC); Serial.print(" "); Serial.print(value1, DEC);
-      Serial.print(value, DEC);
-      Serial.print(" = in float "); Serial.println(y_val,5);
+//      Serial.print(value, DEC);
+//      Serial.print(" = in float "); Serial.println(y_val,5);
     #endif
     x = (float(x_val[index]))/10;
     sigmaX += x;
@@ -177,7 +177,7 @@ void calc_m_c_for_all_sensors()
 {
     int index;
     float m,c;
-    Serial.println("starting calc_m_c_for_all_sensors!");
+//    Serial.println("starting calc_m_c_for_all_sensors!");
     for (index = 0; index< NUM_OF_SENSORS; index++)
     {
       if ((sensorData[index].numOfSamples == 0)||
@@ -192,12 +192,12 @@ void calc_m_c_for_all_sensors()
         sensorData[index].eepromAddr,
         &(sensorData[index].m), 
         &(sensorData[index].c));
-      Serial.print("sensor:");Serial.print(index);
-      Serial.print(", computed m:"); Serial.print(sensorData[index].m,5);
-      Serial.print(", c:");Serial.println(sensorData[index].c,5);
+//      Serial.print("sensor:");Serial.print(index);
+//      Serial.print(", computed m:"); Serial.print(sensorData[index].m,5);
+//      Serial.print(", c:");Serial.println(sensorData[index].c,5);
       
     }
-    Serial.println("Done calc_m_c_for_all_sensors!");
+//    Serial.println("Done calc_m_c_for_all_sensors!");
 }
 
 /*
@@ -237,9 +237,9 @@ int getSensorMilliVoltage(sensor_e sensor, int xSensorUnitValueX10)
     y = (int)(y_float * 1000);
   }
   #if DEBUG_PRINTS
-  Serial.print("sensor:");Serial.print(sensor);Serial.print(": ");Serial.print(xSensorUnitValueX10,3);
-  Serial.print("V = ");Serial.print(y,3);Serial.println(" (x1000).");
-  Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
+//  Serial.print("sensor:");Serial.print(sensor);Serial.print(": ");Serial.print(xSensorUnitValueX10,3);
+//  Serial.print("V = ");Serial.print(y,3);Serial.println(" (x1000).");
+//  Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
   #endif
   return y;
 }
@@ -258,9 +258,9 @@ int getSensorUnitsx10(sensor_e sensor, int yMilliVoltageValue)
     x = (int)(x_float*10);
   }
   #if DEBUG_PRINTS
-  Serial.print("sensor:");Serial.print(sensor);Serial.print(", ");
-  Serial.print(yMilliVoltageValue);Serial.print("mV = ");Serial.print(x);Serial.println(" (x10).");
-  Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
+//  Serial.print("sensor:");Serial.print(sensor);Serial.print(", ");
+//  Serial.print(yMilliVoltageValue);Serial.print("mV = ");Serial.print(x);Serial.println(" (x10).");
+//  Serial.print(sensorData[sensor].m,5);Serial.print("m. c:");Serial.println(sensorData[sensor].c,5);
   #endif
   return x;
 }
@@ -284,7 +284,7 @@ void write_to_eeprom(unsigned int numOfIntWrites, int * addr, int *val)
     storeCalibParam(addr,*val);
     #endif
     #if DEBUG_PRINTS
-      Serial.print("addr "); Serial.print((int)addr, HEX);Serial.print(" = ");Serial.print(*val, DEC);Serial.println(".");
+//      Serial.print("addr "); Serial.print((int)addr, HEX);Serial.print(" = ");Serial.print(*val, DEC);Serial.println(".");
     #endif
     addr++;
     val++;
@@ -318,16 +318,16 @@ void test_loop_calib_calc_m_c() {
     //calibrate dpg1 data
     //calib_calculate_m_c(numOfSamples_dpg2, x_dpg, y_dpg2, &m_dpg2, &c_dpg2);
     #if DEBUG_PRINTS
-      Serial.print("computed m O2:");
-      Serial.print(m_o2,5);
-      Serial.print(",  computed c O2:");
-      Serial.print(c_o2,5);
-      Serial.println(".");
-      Serial.print("computed m PG1:");
-      Serial.print(m_pg1,5);
-      Serial.print(",  computed c PG1:");
-      Serial.print(c_pg1,5);
-      Serial.println(".");
+//      Serial.print("computed m O2:");
+//      Serial.print(m_o2,5);
+//      Serial.print(",  computed c O2:");
+//      Serial.print(c_o2,5);
+//      Serial.println(".");
+//      Serial.print("computed m PG1:");
+//      Serial.print(m_pg1,5);
+//      Serial.print(",  computed c PG1:");
+//      Serial.print(c_pg1,5);
+//      Serial.println(".");
     #endif
   }
   if (execute_get_val)
@@ -338,18 +338,18 @@ void test_loop_calib_calc_m_c() {
     for (x=0.0; x<100; x+=10)
     {
       y = getY(x,m_pg1,c_pg1);
-      Serial.print(x,5);
-      Serial.print(":\t");
-      Serial.println(y,5);
+//      Serial.print(x,5);
+//      Serial.print(":\t");
+//      Serial.println(y,5);
     }
   
     Serial.println("for Y:     \t X");
     for (y=0.0; y<0.5; y+=0.05)
     {
       x = getX(y,m_pg1,c_pg1);
-      Serial.print(y,5);
-      Serial.print(":\t");
-      Serial.println(x,5);
+//      Serial.print(y,5);
+//      Serial.print(":\t");
+//      Serial.println(x,5);
     }
   }
 }
@@ -379,10 +379,17 @@ int PS_ReadSensorMilliVolt(int Channel)
 
 int PS_ReadSensorValueX10(int Channel)
 {
+//  Serial.print(Channel);
+//  Serial.print(" channel:");
   if (Channel<NUM_OF_SENSORS)
   {
+//    Serial.print(sensorOutputData[Channel].unitX10/10);
+//    Serial.print (" units. ");
+//    Serial.print(sensorOutputData[Channel].mV);
+//    Serial.println ("mV");
     return(sensorOutputData[Channel].unitX10);
   }
+//  Serial.println(sensorOutputData[Channel].unitX10);
   return 0;
 }
 
@@ -393,7 +400,7 @@ void saveSensorData(void)
   #if DEBUG_PRINTS
   unsigned long timeUs;
   timeUs = micros();
-  //Serial.println("timer start");
+//  //Serial.println("timer start");
   #endif
   interrupts();
   for (index = 0; index< NUM_OF_SENSORS; index++)
@@ -404,7 +411,7 @@ void saveSensorData(void)
   //interrupts();
   #if DEBUG_PRINTS
   timeUs = micros()-timeUs;
-  Serial.print("done in ");Serial.println(timeUs);
+//  Serial.print("done in ");Serial.println(timeUs);
   #endif
   gSensorDataUpdated = 1;
   /*

@@ -31,7 +31,7 @@ float Pressure;
 /*Debug prints enable */
 #define SERIAL_PRINTS 0
 
-#define OXYGEN_ANALOG_PIN   A0
+#define OXYGEN_ANALOG_PIN   A4
 #define OXYGEN_SET_ANA_PIN  A1
 
 /*ADS115 ADC Channel Assignments */
@@ -266,4 +266,3 @@ int ADC_GetMedian(int *SampleBuf, int len)
   return((int)median);
 }
 #endif
-

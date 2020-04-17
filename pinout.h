@@ -15,7 +15,8 @@
 //I2C
 #define I2C_SCL_PIN         21   //Unchanged
 #define I2C_SDA_PIN         20   // Unchanged
-#define ADS115_INT_PIN      6
+#define ADS115_INT_PIN      6 // Interrupt pin ALRT
+// ADDR pin is connected to ground
 
 //Display
 #define DISPLAY_1_PIN       29   // Changed
@@ -54,4 +55,4 @@
 #define INPUT_AIR_PR_PIN    A9      // Unspecified
 #define PUMP_START_STOP_PIN  D9   // Unspecified
 #define ARM_CONTROL1_PIN     D7     // Unused
-#define ARM_CONTROL2_PIN     D6     // Unused
+#define ARM_CONTROL2_PIN     D6     // Unused.

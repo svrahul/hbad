@@ -169,16 +169,16 @@ void print_menu_common( menuIndex menuIdx)
   int numOfRowsToWrite=0;
   String strOnLine234 = ">";
   #if SERIAL_PRINTS
-  Serial.println("in print_menu_common menu, slect, scroll");
-  Serial.println(menuIdx);
-  Serial.println(seletIndicator);
-  Serial.println(scrollIndex);
+//  Serial.println("in print_menu_common menu, slect, scroll");
+//  Serial.println(menuIdx);
+//  Serial.println(seletIndicator);
+//  Serial.println(scrollIndex);
   #endif
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print(menuItems[menuIdx].menuName);
   #if SERIAL_PRINTS
-  Serial.println(menuItems[menuIdx].menuName);
+//  Serial.println(menuItems[menuIdx].menuName);
   #endif
   numOfRowsToWrite = min(LCD_HEIGHT_CHAR-1, menuItems[menuIdx].menuLength);
   for (int i=0; i < numOfRowsToWrite; i++)//menuItems[menuIdx].menuLength; i++)
@@ -189,14 +189,14 @@ void print_menu_common( menuIndex menuIdx)
       strOnLine234 += menuItems[menuIdx].menu[scrollIndex + i];
       lcd.print (strOnLine234);
       #if SERIAL_PRINTS
-      Serial.println(strOnLine234);
+//      Serial.println(strOnLine234);
       #endif
     }
     else
     {
       lcd.print(menuItems[menuIdx].menu[scrollIndex + i]);
       #if SERIAL_PRINTS
-      Serial.println(menuItems[menuIdx].menu[scrollIndex + i]);
+//      Serial.println(menuItems[menuIdx].menu[scrollIndex + i]);
       #endif
     }
     
@@ -303,7 +303,7 @@ void selection()
 
 void Diagnostics_Mode(void)
 {
-  Serial.println("in Diagnostics_Mode");
+//  Serial.println("in Diagnostics_Mode");
   while(continue_diag_mode)
   {
     RT_Events_T eRTState = RT_NONE;
@@ -315,7 +315,7 @@ void Diagnostics_Mode(void)
     }
     eRTState = Encoder_Scan();
     #if SERIAL_PRINTS
-    Serial.print("in Diagnostics_Mode");Serial.println(eRTState);
+//    Serial.print("in Diagnostics_Mode");Serial.println(eRTState);
     #endif
     switch(eRTState)
     {
@@ -397,7 +397,7 @@ void displayInitialScreen()
     {
       eRTState = Encoder_Scan();
       #if SERIAL_PRINTS
-      Serial.print("in displayInitialScreen input received");Serial.println(eRTState);
+//      Serial.print("in displayInitialScreen input received");Serial.println(eRTState);
       #endif
       switch(eRTState)
       {
@@ -414,5 +414,5 @@ void displayInitialScreen()
       }
     }
   }
-  Serial.println("exited displayInitialScreen");
+//  Serial.println("exited displayInitialScreen");
 }

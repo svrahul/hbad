@@ -18,9 +18,19 @@ void cleanRow(unsigned short row) {
 }
 
 
-void cleanColRow(unsigned short col,unsigned short row) {
+void cleanColRow(unsigned short col, unsigned short row) {
   lcd.setCursor(col, row);
   for (int i = col; i < LCD_LENGTH_CHAR; i++) {
     lcd.print(" ");
   }
+}
+
+void printPadded(int unpaddedNumber) {
+  if (unpaddedNumber < 10) {
+    lcd.print("  ");
+  }else if (unpaddedNumber < 100) {
+    lcd.print(" ");
+  }
+  lcd.print(unpaddedNumber);
+
 }

@@ -28,7 +28,7 @@
 #define NUM_OF_SAMPLES_DPS2 0
 
 #define EEPROM_I2C_ADDR 0x50 //80
-#define EEPROM_BASE_ADDR 0x64
+#define EEPROM_BASE_ADDR 0xC8
 
 //const uint32_t totalKBytes = 64;
 
