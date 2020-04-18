@@ -64,6 +64,11 @@ bool bSendPeakHighDetected = false;
 bool bSendPeepLowDetected = false;
 bool bBreathDetectedFlag = false;
 
+byte editSeletIndicator = 0;
+byte editScrollIndex = 0;
+bool menuChanged = false;
+bool editSelectionMade = false;
+
 void setup() {
 
   pinMode(DISP_ENC_CLK, INPUT);
@@ -177,6 +182,8 @@ void loop() {
     //editMode();
     displayEditMenu();
     gCtrlParamUpdated = 1;
+    editSeletIndicator = 0;
+    editScrollIndex = 0;
     MsTimer2::start();
     runInitDisplay = true;
   }
@@ -228,10 +235,7 @@ typedef enum {
 char* mainEditMenu[MAX_EDIT_MENU_ITEMS] = {"EXIT EDIT MENU", "TV", "BPM", "FiO2", "IER", "PEEP", "PIP"};
 editMenu_T currentEditMenuIdx = MAX_EDIT_MENU_ITEMS;
 
-byte editSeletIndicator = 0;
-byte editScrollIndex = 0;
-bool menuChanged = false;
-bool editSelectionMade = false;
+
 
 void printEditMenu( void)
 {
@@ -333,17 +337,18 @@ void moveDownEdit()
 
 void selectionEdit()
 {
-  if ((editSeletIndicator + editScrollIndex) != MAX_EDIT_MENU_ITEMS)
-  {
-    //we are already in intial edit menu
-    lcd.clear();
-    lcd.setCursor(0, 1);
-    lcd.print("You selected:");
-    lcd.setCursor(0, 2);
-    lcd.print(mainEditMenu[editSeletIndicator + editScrollIndex]);
-    delay(1000);
-    lcd.clear();
-  }
+//  if ((editSeletIndicator + editScrollIndex) != MAX_EDIT_MENU_ITEMS)
+//  {
+//    //we are already in intial edit menu
+//    lcd.clear();
+//    lcd.setCursor(0, 1);
+//    lcd.print("You selected:");
+//    lcd.setCursor(0, 2);
+//    lcd.print(mainEditMenu[editSeletIndicator + editScrollIndex]);
+//    delay(1000);
+//    lcd.clear();
+//  }
+  lcd.clear();
   editSelectionMade = true;
 }
 
@@ -403,34 +408,48 @@ void showSaveSelectedParam()
     //Serial.println(currPos);
     lcd.setCursor(8, 0);
     lcd.print(params[currPos].parm_name);
-    if (currPos == inex_rati.index || currPos == peep_pres.index) {
-      abc();
-      return;
+
+    if (currPos == FIO2_PERC)
+    {
+      lcd.setCursor(0,2);
+      lcd.print("Set using FiO2 valve");
     }
-    params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
-    lcd.setCursor(0, 1);
-    lcd.print("New: ");
-    lcd.print("   ");
-    lcd.setCursor(8, 1);
-    int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
-    printPadded(actualValue);
-    lcd.setCursor(15, 1);
-    lcd.print(params[currPos].units);
-    lcd.setCursor(0, 2);
-    lcd.print("Old: ");
-    lcd.setCursor(8, 2);
-    printPadded(params[currPos].value_curr_mem);
-    lcd.setCursor(15, 2);
-    lcd.print(params[currPos].units);
-    lcd.setCursor(0, 3);
-    if (currentSaveFlag == true) {
-      lcd.print(SAVE_FLAG_CHOSEN);
-      lcd.print("    ");
-      lcd.print(CANC_FLAG);
-    } else {
-      lcd.print(SAVE_FLAG);
-      lcd.print("    ");
-      lcd.print(CANC_FLAG_CHOSEN);
+    else if (currPos == PEEP_PRES)
+    {
+      lcd.setCursor(0,2);
+      lcd.print("Set using PEEP valve");
+    }
+    else
+    {
+      if (currPos == inex_rati.index || currPos == peep_pres.index) {
+        abc();
+        return;
+      }
+      params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
+      lcd.setCursor(0, 1);
+      lcd.print("New: ");
+      lcd.print("   ");
+      lcd.setCursor(8, 1);
+      int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
+      printPadded(actualValue);
+      lcd.setCursor(15, 1);
+      lcd.print(params[currPos].units);
+      lcd.setCursor(0, 2);
+      lcd.print("Old: ");
+      lcd.setCursor(8, 2);
+      printPadded(params[currPos].value_curr_mem);
+      lcd.setCursor(15, 2);
+      lcd.print(params[currPos].units);
+      lcd.setCursor(0, 3);
+      if (currentSaveFlag == true) {
+        lcd.print(SAVE_FLAG_CHOSEN);
+        lcd.print("    ");
+        lcd.print(CANC_FLAG);
+      } else {
+        lcd.print(SAVE_FLAG);
+        lcd.print("    ");
+        lcd.print(CANC_FLAG_CHOSEN);
+      }
     }
     //Serial.println("exiting showSaveSelectedParam");
   }
@@ -646,7 +665,17 @@ void saveSelectedParam() {
     lcd.print(params[currPos].parm_name);
     String command;
     String param;
-    if(ROT_ENC_FOR_IER || ROT_ENC_FOR_PEEP){
+
+    if ((ROT_ENC_FOR_PEEP)||
+        (currPos == FIO2_PERC))
+    {
+      lcd.setCursor(0, 3);
+      lcd.print("   going back....");
+      delay(500);
+      return;
+    }
+    
+    if (ROT_ENC_FOR_IER || ROT_ENC_FOR_PEEP) {
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
        if(params[currPos].parm_name ==IER){
@@ -658,7 +687,7 @@ void saveSelectedParam() {
       lcd.print("                    ");
       lcd.setCursor(0, 3);
       lcd.print(" saved          ");
-       
+      delay(500);
       return;
     }
     if (currentSaveFlag == 0) {
@@ -681,7 +710,7 @@ void saveSelectedParam() {
     }
     actionPending = false;
     switchMode = DISPLAY_MODE;
-    delay(1000);
+    delay(500);
     cleanRow(3);
     resetEditModetime = millis();
   }
@@ -1091,6 +1120,7 @@ void abc() {
   //    }
   RT_Events_T eRTState;
   lastDisplayTime = millis();
+  int oldIER = params[inex_rati.index].value_new_pot;
   resetEditModetime = millis();
   do {
     int incr = 0;
@@ -1122,9 +1152,13 @@ void abc() {
       if (ROT_ENC_FOR_IER) {
         newIER = rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
         //      cleanRow(1);
-        lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-        lcd.print("1:");
+        ;lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+        lcd.setCursor(3,1);
+        lcd.print("New IER  1:");
         lcd.print(newIER);
+        lcd.setCursor(3,2);
+        lcd.print("Old IER  1:");
+        lcd.print(oldIER);
         params[inex_rati.index].value_new_pot = newIER;
         params[inex_rati.index].value_curr_mem = newIER;
       } else if (ROT_ENC_FOR_PEEP) {
@@ -1133,6 +1167,8 @@ void abc() {
         params[peep_pres.index].value_curr_mem = newPeep;
         lcd.setCursor(VALUE1_DISPLAY_POS, 1);
         printPadded(newPeep);
+        lcd.setCursor(0,3);
+        lcd.print("set using PEEP valve");
       }
       incr=0;
     }
