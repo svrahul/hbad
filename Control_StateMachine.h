@@ -27,6 +27,12 @@
 #define START_DELIM '$'
 #define END_DELIM '&'
 #define VENT_MAST "VM"
+#define TIDAL_VOLUME "TV"
+#define RR "RR"
+#define IER "IE" 
+#define PARAM1 "P1"
+#define PARAM2 "P2"
+#define PARAM5 "P5"
 int binaryNum[4];
 
 

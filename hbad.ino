@@ -369,8 +369,8 @@ void saveSelectedParam() {
     if(ROT_ENC_FOR_IER || ROT_ENC_FOR_PEEP){
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
-       if(params[currPos].parm_name =="IE"){
-        param = "P5";
+       if(params[currPos].parm_name ==IER){
+        param = PARAM5;
       }
        command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
@@ -384,10 +384,10 @@ void saveSelectedParam() {
       
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
-      if(params[currPos].parm_name =="TV"){
-        param = "P1";
-      }else if(params[currPos].parm_name =="RR"){
-        param = "P2";
+      if(params[currPos].parm_name ==TIDAL_VOLUME){
+        param = PARAM1;
+      }else if(params[currPos].parm_name ==RR){
+        param = PARAM2;
       }
       command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
