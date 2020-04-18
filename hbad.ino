@@ -45,7 +45,8 @@ int SensorValuesSendCount = 0;
 // Control statemachine gloabl variable
 ControlStatesDef_T geCtrlState = CTRL_INIT;
 ControlStatesDef_T geCtrlPrevState  = CTRL_INIT;
-bool bSendInitCommand = true;
+bool bSendInitCommand = false;
+bool machineOn = false;
 //Need to Integrate into Main Code
 bool compressionCycle = false;
 bool expansionCycle = false;
@@ -70,6 +71,7 @@ bool editSelectionMade = false;
 
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(RESET_SWITCH, INPUT_PULLUP);
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
   pinMode(DISP_ENC_SW, INPUT_PULLUP);
@@ -191,6 +193,15 @@ void loop() {
     Ctrl_ProcessRxData();
   }
   Ctrl_StateMachine_Manager();
+  if (digitalRead(RESET_SWITCH) == LOW)
+  {
+    //reset switch.
+    bSendInitCommand = true;
+    machineOn = true;
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(1000);
+    digitalWrite(BUZZER_PIN, LOW);
+  }
   getGraphSensorsReading();
   Serial.print((PS_ReadSensorValueX10(O2)) / 10);
   Serial.print(" O2 ");

@@ -18,6 +18,7 @@
 #define BUZZER_PIN          3
 #define ADS115_INT_PIN      6 // Interrupt pin ALRT
 // ADDR pin is connected to ground
+#define RESET_SWITCH        13
 
 //Display
 #define DISPLAY_1_PIN       29   // Changed
