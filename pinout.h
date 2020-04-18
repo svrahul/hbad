@@ -15,6 +15,7 @@
 //I2C
 #define I2C_SCL_PIN         21   //Unchanged
 #define I2C_SDA_PIN         20   // Unchanged
+#define BUZZER_PIN          3
 #define ADS115_INT_PIN      6 // Interrupt pin ALRT
 // ADDR pin is connected to ground
 

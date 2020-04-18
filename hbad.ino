@@ -69,7 +69,7 @@ bool menuChanged = false;
 bool editSelectionMade = false;
 
 void setup() {
-
+  pinMode(BUZZER_PIN, OUTPUT);
   pinMode(DISP_ENC_CLK, INPUT);
   pinMode(DISP_ENC_DT, INPUT);
   pinMode(DISP_ENC_SW, INPUT_PULLUP);
@@ -529,7 +529,9 @@ void saveSelectedParam() {
       lcd.print("                    ");
       lcd.setCursor(0, 3);
       lcd.print(" saved          ");
+      digitalWrite(BUZZER_PIN, HIGH);
       delay(500);
+      digitalWrite(BUZZER_PIN, LOW);
       return;
     }
     if (currentSaveFlag == 0) {
@@ -549,10 +551,12 @@ void saveSelectedParam() {
       lcd.print("                    ");
       lcd.setCursor(0, 3);
       lcd.print(" saved.....");
+      digitalWrite(BUZZER_PIN, HIGH);
     }
     actionPending = false;
     switchMode = DISPLAY_MODE;
     delay(500);
+    digitalWrite(BUZZER_PIN, LOW);
     cleanRow(3);
     resetEditModetime = millis();
   }

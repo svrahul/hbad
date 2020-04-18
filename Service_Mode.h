@@ -143,6 +143,12 @@ RT_Events_T encoderScanUnblocked()
     // Remember last button press event
     lastButtonPress = millis();
   }
+  if (eRTState != RT_NONE)
+  {
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(1);
+    digitalWrite(BUZZER_PIN, LOW);
+  }
   return eRTState;
 }
 
