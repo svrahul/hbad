@@ -197,10 +197,15 @@ void loop() {
   {
     //reset switch.
     bSendInitCommand = true;
+    if(machineOn){
+      Serial2.print(commands[STPR_STP]);
+    }else{
     machineOn = true;
     digitalWrite(BUZZER_PIN, HIGH);
     delay(1000);
-    digitalWrite(BUZZER_PIN, LOW);
+    digitalWrite(BUZZER_PIN, LOW);  
+    }
+    
   }
   getGraphSensorsReading();
   Serial.print((PS_ReadSensorValueX10(O2)) / 10);
