@@ -68,6 +68,12 @@ byte editSeletIndicator = 0;
 byte editScrollIndex = 0;
 bool menuChanged = false;
 bool editSelectionMade = false;
+#define CYLINDER 0
+#define HOSP_LINE 1
+bool o2LineSelect = CYLINDER; 
+bool tempO2LineSelect = 0;
+char * o2LineString[2] = {"Cylinder", "Hospital line"};
+bool o2LineChange = false;
 
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
@@ -200,12 +206,11 @@ void loop() {
     if(machineOn){
       Serial2.print(commands[STPR_STP]);
     }else{
-    machineOn = true;
+      machineOn = true;
+    }
     digitalWrite(BUZZER_PIN, HIGH);
     delay(1000);
-    digitalWrite(BUZZER_PIN, LOW);  
-    }
-    
+    digitalWrite(BUZZER_PIN, LOW);
   }
   getGraphSensorsReading();
   Serial.print((PS_ReadSensorValueX10(O2)) / 10);
@@ -225,10 +230,11 @@ typedef enum {
   E_IER,
   E_PEEP,
   E_PIP,
+  E_O2_INPUT,
   MAX_EDIT_MENU_ITEMS
 } editMenu_T;
 
-char* mainEditMenu[MAX_EDIT_MENU_ITEMS] = {"EXIT EDIT MENU", "TV", "BPM", "FiO2", "IER", "PEEP", "PIP"};
+char* mainEditMenu[MAX_EDIT_MENU_ITEMS] = {"EXIT EDIT MENU", "TV", "BPM", "FiO2", "IER", "PEEP", "PIP", "O2 in"};
 editMenu_T currentEditMenuIdx = MAX_EDIT_MENU_ITEMS;
 
 
@@ -281,6 +287,9 @@ void printEditMenu( void)
       case (E_PIP):
         strOnLine234 += params[PEAK_PRES].value_curr_mem;
         strOnLine234 += "cmH2O";
+        break;
+      case (E_O2_INPUT):
+        strOnLine234 += o2LineString[o2LineSelect];
         break;
     }
 
@@ -403,58 +412,66 @@ void showSaveSelectedParam()
     lastDisplayTime = millis();
     //Serial.println("in showSaveSelectedParam");
     //Serial.println(currPos);
-    lcd.setCursor(8, 0);
-    lcd.print(params[currPos].parm_name);
-
-    if (currPos == FIO2_PERC)
+    if (o2LineChange)
     {
-      lcd.setCursor(0, 2);
-      lcd.print("Set using FiO2 valve");
-    }
-    else if (currPos == PEEP_PRES)
-    {
-      lcd.setCursor(0, 2);
-      lcd.print("Set using PEEP valve");
+      // change tempO2LineSelect
+      o2LineChanger();
     }
     else
     {
-      if (currPos == inex_rati.index || currPos == peep_pres.index) {
-        abc();
-        return;
-      }
-      params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
-      lcd.setCursor(0, 1);
-      lcd.print("New: ");
-      lcd.print("   ");
-      lcd.setCursor(8, 1);
-      int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
-      printPadded(actualValue);
-      lcd.setCursor(15, 1);
-      lcd.print(params[currPos].units);
-      lcd.setCursor(0, 2);
-      lcd.print("Old: ");
-      lcd.setCursor(8, 2);
-      printPadded(params[currPos].value_curr_mem);
-      lcd.setCursor(15, 2);
-      lcd.print(params[currPos].units);
-      lcd.setCursor(0, 3);
-      if (currentSaveFlag == true) {
-        lcd.print(SAVE_FLAG_CHOSEN);
-        lcd.print("    ");
-        lcd.print(CANC_FLAG);
-      } else {
-        lcd.print(SAVE_FLAG);
-        lcd.print("    ");
-        lcd.print(CANC_FLAG_CHOSEN);
-      }
-
-      int diffValue = abs(oldValue - params[currPos].value_new_pot);
-      Serial.print("diffValue "); Serial.println(diffValue);
-      if (diffValue > 5)
+      lcd.setCursor(8, 0);
+      lcd.print(params[currPos].parm_name);
+  
+      if (currPos == FIO2_PERC)
       {
-        resetEditModetime = millis();
+        lcd.setCursor(0,2);
+        lcd.print("Set using FiO2 valve");
       }
-      oldValue = params[currPos].value_new_pot;
+      else if (currPos == PEEP_PRES)
+      {
+        lcd.setCursor(0,2);
+        lcd.print("Set using PEEP valve");
+      }
+      else
+      {
+        if (currPos == inex_rati.index || currPos == peep_pres.index) {
+          abc();
+          return;
+        }
+        params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
+        lcd.setCursor(0, 1);
+        lcd.print("New: ");
+        lcd.print("   ");
+        lcd.setCursor(8, 1);
+        int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
+        printPadded(actualValue);
+        lcd.setCursor(15, 1);
+        lcd.print(params[currPos].units);
+        lcd.setCursor(0, 2);
+        lcd.print("Old: ");
+        lcd.setCursor(8, 2);
+        printPadded(params[currPos].value_curr_mem);
+        lcd.setCursor(15, 2);
+        lcd.print(params[currPos].units);
+        lcd.setCursor(0, 3);
+        if (currentSaveFlag == true) {
+          lcd.print(SAVE_FLAG_CHOSEN);
+          lcd.print("    ");
+          lcd.print(CANC_FLAG);
+        } else {
+          lcd.print(SAVE_FLAG);
+          lcd.print("    ");
+          lcd.print(CANC_FLAG_CHOSEN);
+        }
+  
+        int diffValue = abs(oldValue - params[currPos].value_new_pot);
+        Serial.print("diffValue "); Serial.println(diffValue);
+        if (diffValue>5)
+        {
+          resetEditModetime = millis();
+        }
+        oldValue = params[currPos].value_new_pot;
+      }
     }
     //Serial.println("exiting showSaveSelectedParam");
   }
@@ -504,6 +521,9 @@ void displayEditMenu(void)
         case (E_PIP):
           currPos = PEAK_PRES;
           break;
+        case (E_O2_INPUT):
+          o2LineChange = true;
+          break;
         default:
           break;
       }
@@ -523,6 +543,33 @@ void saveSelectedParam() {
     lcd.print(params[currPos].parm_name);
     String command;
     String param;
+    if (o2LineChange)
+    {
+      lcd.setCursor(0, 3);
+      lcd.print("                    ");
+      lcd.setCursor(0, 3);
+      lcd.print(" saved          ");
+      if (o2LineSelect != tempO2LineSelect)
+      {
+        o2LineSelect = tempO2LineSelect;
+        if (o2LineSelect == CYLINDER)
+        {
+          Serial2.print(commands[OXY_SOLE_HOS_O2_OFF]);
+          delay(10);
+          Serial2.print(commands[OXY_SOLE_CYL_ONN]);
+        }
+        else //HOSP_LINE
+        {
+          Serial2.print(commands[OXY_SOLE_CYL_OFF]);
+          delay(10);
+          Serial2.print(commands[OXY_SOLE_HOS_O2_ONN]);
+        }
+      }
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(500);
+      digitalWrite(BUZZER_PIN, LOW);
+      return;
+    }
 
     if ((ROT_ENC_FOR_PEEP) ||
         (currPos == FIO2_PERC))
@@ -937,25 +984,55 @@ void Ctrl_StateMachine_Manager(void)
   }
 }
 
+void o2LineChanger() {
+  RT_Events_T eRTState;
+  lastDisplayTime = millis();
+  resetEditModetime = millis();
+  do {
+    eRTState = encoderScanUnblocked();
+    if (eRTState != RT_NONE)
+    {
+      resetEditModetime = millis();
+    }
+    switch (eRTState)
+    {
+      case RT_INC:
+        tempO2LineSelect = 1;
+        break;
+      case   RT_DEC:
+        tempO2LineSelect = 0;
+        break;
+      case   RT_BT_PRESS:
+        currentSaveFlag = true;
+        switchMode = PAR_SAVE_MODE;
+        saveSelectedParam();
+        editSelectionMade = false;
+        o2LineChange = false;
+        return;
+        break;
+    }
+    if ((millis() - lastDisplayTime > 500) ||
+      (eRTState != RT_NONE))
+    {
+      lcd.setCursor(0, 1);
+      if (tempO2LineSelect == 0)
+      {
+        lcd.print("< O2 Cylinder >  ");
+        lcd.setCursor(0, 2);
+        lcd.print("  Hospital Line  ");
+      }
+      else
+      {
+        lcd.print("  O2 Cylinder    ");
+        lcd.setCursor(0, 2);
+        lcd.print("< Hospital Line > ");
+      }
+      lastDisplayTime = millis();
+    }
+  }while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
+}
 
 void abc() {
-  /*Index_select loop*/
-  //  unsigned long lastRotateTime = 0;
-  //  unsigned long rotateTime = millis();
-  //  currentCLK = digitalRead(DISP_ENC_CLK);
-  //  while (READ_FROM_ENCODER) {
-  //    currentCLK = digitalRead(DISP_ENC_CLK);
-  //    int incr = 0;
-  //    if (currentCLK != lastCLK) {
-  //      if (currentCLK != lastCLK && currentCLK == 1) {
-  //        if (digitalRead(DISP_ENC_DT) != currentCLK ) {
-  //          incr--;
-  //        } else {
-  //          incr++;
-  //        }
-  //      }
-  //      resetEditModetime = millis();
-  //    }
   RT_Events_T eRTState;
   lastDisplayTime = millis();
   int oldIER = params[inex_rati.index].value_curr_mem;
