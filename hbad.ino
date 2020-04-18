@@ -427,7 +427,7 @@ void showSaveSelectedParam()
 
       int diffValue = abs(oldValue - params[currPos].value_new_pot);
       Serial.print("diffValue "); Serial.println(diffValue);
-      if (diffValue>50)
+      if (diffValue>5)
       {
         resetEditModetime = millis();
       }
@@ -931,7 +931,7 @@ void abc() {
   //    }
   RT_Events_T eRTState;
   lastDisplayTime = millis();
-  int oldIER = params[inex_rati.index].value_new_pot;
+  int oldIER = params[inex_rati.index].value_curr_mem;
   resetEditModetime = millis();
   do {
     int incr = 0;

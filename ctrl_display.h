@@ -61,7 +61,7 @@ const ctrl_parameter_t resp_rate =    {1, "BPM ", RR_PIN,
                                        "BPM  ", 1,
                                        0, 0
                                       };
-const ctrl_parameter_t peak_press =   {2, "PAW ", PMAX_PIN,
+const ctrl_parameter_t peak_press =   {2, "PIP ", PMAX_PIN,
                                        40, 60,
                                        UNIT_CMH2O, 1,
                                        0, 0
