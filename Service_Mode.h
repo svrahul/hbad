@@ -1,6 +1,6 @@
 
 #include "lcd.h"
-#define SERIAL_PRINTS 1
+#define SERIAL_PRINTS 0
 
 typedef enum 
 {
@@ -186,20 +186,17 @@ void print_menu_common( menuIndex menuIdx)
     lcd.setCursor(0,i+1);
     if (seletIndicator == i+1)
     {
+      strOnLine234 = ">";
+    }
+    else
+    {
+      strOnLine234 = " ";
+    }
       strOnLine234 += menuItems[menuIdx].menu[scrollIndex + i];
       lcd.print (strOnLine234);
       #if SERIAL_PRINTS
 //      Serial.println(strOnLine234);
       #endif
-    }
-    else
-    {
-      lcd.print(menuItems[menuIdx].menu[scrollIndex + i]);
-      #if SERIAL_PRINTS
-//      Serial.println(menuItems[menuIdx].menu[scrollIndex + i]);
-      #endif
-    }
-    
   }
   lcd.setCursor(0,(CursorLine-scrollIndex)+1);
 }
@@ -367,7 +364,7 @@ void selection_init()
 void displayInitialScreen()
 {
   boolean continueLoop = true;
-  int wait = 599;
+  int wait = 299;
   RT_Events_T eRTState = RT_NONE;
   encoderScanUnblocked();
   encoderScanUnblocked();

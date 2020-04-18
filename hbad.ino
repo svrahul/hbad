@@ -38,6 +38,7 @@ int gCtrlParamUpdated = 0;
 #define SEND_CTRL_PARAMS_COUNT 15
 #define SEND_SENSOR_VALUES_COUNT 5
 
+
 int lcdRunTimerRefreshCount = 0;
 int ContrlParamsSendCount = 0;
 int SensorValuesSendCount = 0;
@@ -173,7 +174,8 @@ void loop() {
   {
     Serial.println("Entering Edit mode!");
     MsTimer2::stop();
-    editMode();
+    //editMode();
+    displayEditMenu();
     gCtrlParamUpdated = 1;
     MsTimer2::start();
     runInitDisplay = true;
@@ -210,6 +212,284 @@ void editMode()
   } while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
   Serial2.print(commands[SL_COM_PARM_EDT]);
   lcd.begin(LCD_LENGTH_CHAR, LCD_HEIGHT_CHAR);
+}
+
+typedef enum {
+  E_EXIT,
+  E_TV,
+  E_BPM,
+  E_FiO2,
+  E_IER,
+  E_PEEP,
+  E_PIP,
+  MAX_EDIT_MENU_ITEMS
+} editMenu_T;
+
+char* mainEditMenu[MAX_EDIT_MENU_ITEMS] = {"EXIT EDIT MENU", "TV", "BPM", "FiO2", "IER", "PEEP", "PIP"};
+editMenu_T currentEditMenuIdx = MAX_EDIT_MENU_ITEMS;
+
+byte editSeletIndicator = 0;
+byte editScrollIndex = 0;
+bool menuChanged = false;
+bool editSelectionMade = false;
+
+void printEditMenu( void)
+{
+  String strOnLine234;
+#if SERIAL_PRINTS
+  Serial.println(editSeletIndicator);
+  Serial.println(editScrollIndex);
+#endif
+  lcd.clear();
+  for (int i = 0; i <= LCD_HEIGHT_CHAR - 1; i++) //menuItems[menuIdx].menuLength; i++)
+  {
+    lcd.setCursor(0, i);
+    if (editSeletIndicator == i)
+    {
+      strOnLine234 = ">";
+    }
+    else
+    {
+      strOnLine234 = " ";
+    }
+    strOnLine234 += mainEditMenu[editScrollIndex + i];
+    if (editScrollIndex + i != 0)
+    {
+      strOnLine234 += ":";
+    }
+    switch (editScrollIndex + i)
+    {
+      case (E_TV):
+        strOnLine234 += params[TIDAL_VOL].value_curr_mem;
+        strOnLine234 += "mL";
+        break;
+      case (E_BPM):
+        strOnLine234 += params[BPM].value_curr_mem;
+        break;
+      case (E_FiO2):
+        strOnLine234 += params[FIO2_PERC].value_curr_mem;
+        strOnLine234 += "%";
+        break;
+      case (E_IER):
+        strOnLine234 += " 1:";
+        strOnLine234 += params[IE_RATIO].value_curr_mem;
+        break;
+      case (E_PEEP):
+        strOnLine234 += params[PEEP_PRES].value_curr_mem;
+        strOnLine234 += "cmH2O";
+        break;
+      case (E_PIP):
+        strOnLine234 += params[PEAK_PRES].value_curr_mem;
+        strOnLine234 += "cmH2O";
+        break;
+    }
+
+    lcd.print (strOnLine234);
+#if SERIAL_PRINTS
+    Serial.println(strOnLine234);
+#endif
+  }
+}
+
+
+void moveUpEdit()
+{
+  editSeletIndicator++;
+  /*
+     check wrap around of select indicator
+  */
+  if ((editSeletIndicator >= MAX_EDIT_MENU_ITEMS) ||
+      (editSeletIndicator > LCD_HEIGHT_CHAR - 1))
+  {
+    editSeletIndicator = min(LCD_HEIGHT_CHAR - 1, MAX_EDIT_MENU_ITEMS);
+    if (editSeletIndicator == LCD_HEIGHT_CHAR - 1)
+    {
+      editScrollIndex++;
+    }
+    if ((editScrollIndex + editSeletIndicator) >= MAX_EDIT_MENU_ITEMS)
+    {
+      editScrollIndex = MAX_EDIT_MENU_ITEMS - editSeletIndicator - 1;
+    }
+  }
+}
+
+void moveDownEdit()
+{
+  /*
+     check wrap around of select indicator
+  */
+  if (editSeletIndicator == 0 )
+  {
+    if (editScrollIndex > 0)
+    {
+      editScrollIndex--;
+    }
+  }
+  else
+  {
+    editSeletIndicator--;
+  }
+}
+
+void selectionEdit()
+{
+  if ((editSeletIndicator + editScrollIndex) != MAX_EDIT_MENU_ITEMS)
+  {
+    //we are already in intial edit menu
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("You selected:");
+    lcd.setCursor(0, 2);
+    lcd.print(mainEditMenu[editSeletIndicator + editScrollIndex]);
+    delay(1000);
+    lcd.clear();
+  }
+  editSelectionMade = true;
+}
+
+
+
+void editModeEncoderInput(void)
+{
+  RT_Events_T eRTState = RT_NONE;
+  eRTState = encoderScanUnblocked();
+  switch (eRTState)
+  {
+    case RT_INC:
+      moveUpEdit();
+      break;
+    case   RT_DEC:
+      moveDownEdit();
+      break;
+    case   RT_BT_PRESS:
+      selectionEdit();
+      break;
+  }
+  if (eRTState != RT_NONE)
+  {
+    resetEditModetime = millis();
+    menuChanged = true;
+  }
+}
+
+long unsigned lastDisplayTime = 0;
+void showSaveSelectedParam()
+{
+  RT_Events_T eRTState = RT_NONE;
+  eRTState = encoderScanUnblocked();
+  switch (eRTState)
+  {
+    case RT_INC:
+      currentSaveFlag = false;
+      break;
+    case   RT_DEC:
+      currentSaveFlag = true;
+      break;
+    case   RT_BT_PRESS:
+      switchMode = PAR_SAVE_MODE;
+      saveSelectedParam();
+      editSelectionMade = false;
+      break;
+  }
+  if (eRTState != RT_NONE)
+  {
+    resetEditModetime = millis();
+  }
+  if ((millis() - lastDisplayTime > 500) ||
+      (eRTState != RT_NONE))
+  {
+    lastDisplayTime = millis();
+    //Serial.println("in showSaveSelectedParam");
+    //Serial.println(currPos);
+    lcd.setCursor(8, 0);
+    lcd.print(params[currPos].parm_name);
+    if (currPos == inex_rati.index || currPos == peep_pres.index) {
+      abc();
+      return;
+    }
+    params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
+    lcd.setCursor(0, 1);
+    lcd.print("New: ");
+    lcd.print("   ");
+    lcd.setCursor(8, 1);
+    int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
+    printPadded(actualValue);
+    lcd.setCursor(15, 1);
+    lcd.print(params[currPos].units);
+    lcd.setCursor(0, 2);
+    lcd.print("Old: ");
+    lcd.setCursor(8, 2);
+    printPadded(params[currPos].value_curr_mem);
+    lcd.setCursor(15, 2);
+    lcd.print(params[currPos].units);
+    lcd.setCursor(0, 3);
+    if (currentSaveFlag == true) {
+      lcd.print(SAVE_FLAG_CHOSEN);
+      lcd.print("    ");
+      lcd.print(CANC_FLAG);
+    } else {
+      lcd.print(SAVE_FLAG);
+      lcd.print("    ");
+      lcd.print(CANC_FLAG_CHOSEN);
+    }
+    //Serial.println("exiting showSaveSelectedParam");
+  }
+}
+
+void displayEditMenu(void)
+{
+  menuChanged = true;
+  bool continueEditModeFlag = true;
+  editSelectionMade = false;
+  currentSaveFlag = false;
+  do {
+    if (editSelectionMade == false)
+    {
+      //display prameters if changed.
+      if (menuChanged)
+      {
+        printEditMenu();
+        menuChanged = false;
+      }
+      //get parameters changes in unblocked manner.
+      editModeEncoderInput();
+    }
+    else
+    {
+      //act on the input
+      switch (editSeletIndicator + editScrollIndex)
+      {
+        case (E_EXIT):
+          continueEditModeFlag = false;
+          break;
+        case (E_TV):
+          currPos = TIDAL_VOL;
+          break;
+        case (E_BPM):
+          currPos = BPM;
+          break;
+        case (E_FiO2):
+          currPos = FIO2_PERC;
+          break;
+        case (E_IER):
+          currPos = IE_RATIO;
+          break;
+        case (E_PEEP):
+          currPos = PEEP_PRES;
+          break;
+        case (E_PIP):
+          currPos = PEAK_PRES;
+          break;
+        default:
+          break;
+      }
+      if (continueEditModeFlag == true)
+      {
+        switchMode = PAR_SELECTED_MODE;
+        showSaveSelectedParam();
+      }
+    }
+  } while (((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT) && (continueEditModeFlag));
 }
 
 
@@ -266,7 +546,7 @@ void editParameterMode() {
     currPos = 0;
     lcd.setCursor(0, 0);
     lcd.print(mode_headers[switchMode]);
-    cleanColRow(4, 1);
+    cleanColRow(2, 1);
     for (int i = 2; i < LCD_HEIGHT_CHAR; i++) {
       cleanRow(i);
     }
@@ -374,12 +654,15 @@ void saveSelectedParam() {
       }
        command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
+      lcd.setCursor(0, 3);
+      lcd.print("                    ");
+      lcd.setCursor(0, 3);
       lcd.print(" saved          ");
        
       return;
     }
     if (currentSaveFlag == 0) {
-      lcd.print("Edit cancelled......");
+      lcd.print(" Edit cancelled.");
     } else {
       
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
@@ -391,15 +674,16 @@ void saveSelectedParam() {
       }
       command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
-      lcd.print(" saved..........");
+      lcd.setCursor(0, 3);
+      lcd.print("                    ");
+      lcd.setCursor(0, 3);
+      lcd.print(" saved.....");
     }
     actionPending = false;
     switchMode = DISPLAY_MODE;
     delay(1000);
     cleanRow(3);
     resetEditModetime = millis();
-    
-    
   }
 }
 
@@ -491,18 +775,24 @@ void displayChannelData(sensor_e sensor)
     o2mVReading = PS_ReadSensor( sensor );
     Serial.print(o2mVReading);
     Serial.print(DPS2);
-    lcd.print(o2mVReading);
-    lcd.print("mV, ");
+    String disp = "";
+    disp += o2mVReading;
+    disp += "mV, ";
     o2Unitx10 = getSensorUnitsx10(O2, o2mVReading);
-    lcd.print(((float)o2Unitx10) / 10);
+    disp += (((float)o2Unitx10) / 10);
     if (sensor == O2)
     {
-      lcd.print("%");
+      disp += ("%   ");
     }
     else
     {
-      lcd.print ("pressure units");
+      disp += ("cmH2O  ");
     }
+    while (disp.length() != LCD_LENGTH_CHAR)
+    {
+      disp += " ";
+    }
+    lcd.print(disp);
     for (int wait = 0; wait < 200; wait += 20)
     {
       eRTState = encoderScanUnblocked();
@@ -783,40 +1073,69 @@ void Ctrl_StateMachine_Manager(void)
 
 void abc() {
   /*Index_select loop*/
-//  unsigned long lastRotateTime = 0;
-//  unsigned long rotateTime = millis();
-  currentCLK = digitalRead(DISP_ENC_CLK);
-  while (READ_FROM_ENCODER) {
-    currentCLK = digitalRead(DISP_ENC_CLK);
+  //  unsigned long lastRotateTime = 0;
+  //  unsigned long rotateTime = millis();
+  //  currentCLK = digitalRead(DISP_ENC_CLK);
+  //  while (READ_FROM_ENCODER) {
+  //    currentCLK = digitalRead(DISP_ENC_CLK);
+  //    int incr = 0;
+  //    if (currentCLK != lastCLK) {
+  //      if (currentCLK != lastCLK && currentCLK == 1) {
+  //        if (digitalRead(DISP_ENC_DT) != currentCLK ) {
+  //          incr--;
+  //        } else {
+  //          incr++;
+  //        }
+  //      }
+  //      resetEditModetime = millis();
+  //    }
+  RT_Events_T eRTState;
+  lastDisplayTime = millis();
+  resetEditModetime = millis();
+  do {
     int incr = 0;
-    if (currentCLK != lastCLK) {
-      if (currentCLK != lastCLK && currentCLK == 1) {
-        if (digitalRead(DISP_ENC_DT) != currentCLK ) {
-          incr--;
-        }else{
-          incr++;
-        }
-      }
+    eRTState = encoderScanUnblocked();
+    if (eRTState != RT_NONE)
+    {
       resetEditModetime = millis();
     }
-    if (ROT_ENC_FOR_IER) {
-      newIER = rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
-//      cleanRow(1);
-      lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-      lcd.print("1:");
-      lcd.print(newIER);
-      params[inex_rati.index].value_new_pot = newIER;
-      params[inex_rati.index].value_curr_mem = newIER;
-    } else if (ROT_ENC_FOR_PEEP) {
-      newPeep = rectifyBoundaries(newPeep + incr * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
-      params[peep_pres.index].value_new_pot = newPeep;
-      params[peep_pres.index].value_curr_mem = newPeep;
-      lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-      printPadded(newPeep);
+    switch (eRTState)
+    {
+      case RT_INC:
+        incr++;
+        break;
+      case   RT_DEC:
+        incr--;
+        break;
+      case   RT_BT_PRESS:
+        currentSaveFlag = true;
+        switchMode = PAR_SAVE_MODE;
+        saveSelectedParam();
+        editSelectionMade = false;
+        return;
+        break;
+    }
+    if ((millis() - lastDisplayTime > 500) ||
+      (incr != 0))
+    {
+      lastDisplayTime = millis();
+      if (ROT_ENC_FOR_IER) {
+        newIER = rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
+        //      cleanRow(1);
+        lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+        lcd.print("1:");
+        lcd.print(newIER);
+        params[inex_rati.index].value_new_pot = newIER;
+        params[inex_rati.index].value_curr_mem = newIER;
+      } else if (ROT_ENC_FOR_PEEP) {
+        newPeep = rectifyBoundaries(newPeep + incr * peep_pres.incr, peep_pres.min_val, peep_pres.max_val);
+        params[peep_pres.index].value_new_pot = newPeep;
+        params[peep_pres.index].value_curr_mem = newPeep;
+        lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+        printPadded(newPeep);
+      }
+      incr=0;
     }
     lastCLK = currentCLK;
-    if((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT){
-      break;
-    }
-  }
+  }while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
 }

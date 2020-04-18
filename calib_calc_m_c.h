@@ -36,7 +36,7 @@ typedef struct{
  */
 sensorOutputDataT sensorOutputData[NUM_OF_SENSORS];
 
-int gSensorDataUpdated =0;
+int gSensorDataUpdated =1;
 
 //slope(m) and constant(c) for all the sensors.
 float m_o2, c_o2, m_pg1, c_pg1, m_pg2, c_pg2, m_dpg1, c_dpg1, m_dpg2, c_dpg2;
