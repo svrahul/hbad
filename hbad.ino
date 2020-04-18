@@ -2,9 +2,9 @@
 #include "pinout.h"
 #include "ctrl_display.h"
 //#include "lcd.h"
-#include "hbad_serial.h"
 #include "calib_calc_m_c.h"
 #include "sensor_params.h"
+#include "hbad_serial.h"
 #include "sensor_read.h"
 #include "./libraries/MsTimer2/MsTimer2.h"
 #include "./libraries/MsTimer2/MsTimer2.cpp"
@@ -46,6 +46,7 @@ int SensorValuesSendCount = 0;
 ControlStatesDef_T geCtrlState = CTRL_INIT;
 ControlStatesDef_T geCtrlPrevState  = CTRL_INIT;
 bool bSendInitCommand = false;
+bool bCommandSendFlag = false;
 bool machineOn = false;
 //Need to Integrate into Main Code
 bool compressionCycle = false;
@@ -68,6 +69,9 @@ byte editSeletIndicator = 0;
 byte editScrollIndex = 0;
 bool menuChanged = false;
 bool editSelectionMade = false;
+
+unsigned char *CtrlRxBuf = NULL;
+int EvetDataLen =0;
 
 void setup() {
   pinMode(BUZZER_PIN, OUTPUT);
@@ -187,9 +191,9 @@ void loop() {
     MsTimer2::start();
     runInitDisplay = true;
   }
-  if (gCntrlSerialEventRecvd == true)
+  /*Check if there is any command received from Motor control module*/
+  if(UART2_IsCtrlPacketRecevied(&CtrlRxBuf, &EvetDataLen))
   {
-    gCntrlSerialEventRecvd = false;
     Ctrl_ProcessRxData();
   }
   Ctrl_StateMachine_Manager();
@@ -724,8 +728,52 @@ void checkSendDataToGraphicsDisplay(void)
     UART3_SendDAQDataGraphicDisplay(SENSORS_DATA);
   }
 }
-
 void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
+ {
+  unsigned short int crc16Val=0;
+  int index=0;
+  if(ePacketType == SENSORS_DATA)
+  {
+    u8TxBuf[index++] = GRAPHICS_DISPLAY_ADDR;  //Destination address
+    u8TxBuf[index++] = READ_SENSORS_DATA_FC; //Read sensors data function code   
+    u8TxBuf[index++] = TOTAL_NUMBER_OF_SENSORS*2+1; //Data payload length
+    u8TxBuf[index++] = TOTAL_NUMBER_OF_SENSORS;  // Number of elements 
+    for(int i=0; i<TOTAL_NUMBER_OF_SENSORS; i++)
+    {
+      u8TxBuf[index++] = (unsigned char)(((sensorOutputData[i].unitX10 & 0xFF00)>>8) & 0x00FF);
+      u8TxBuf[index++] = (unsigned char)(sensorOutputData[i].unitX10 & 0x00FF);
+    }
+  }
+  else if(ePacketType == PARAMS_DATA)
+  {
+    u8TxBuf[index++] = GRAPHICS_DISPLAY_ADDR;  //Destination address
+    u8TxBuf[index++] = READ_CTRL_PARAMS_FC; // Read control params data   
+    u8TxBuf[index++] = TOTAL_NUMBER_OF_PARAMS*2+1;  //Payload length
+    u8TxBuf[index++] = TOTAL_NUMBER_OF_PARAMS; //Nuber of elements 
+
+    for(int i=0; i<TOTAL_NUMBER_OF_PARAMS; i++)
+    {
+      u8TxBuf[index++] = (unsigned char)(((params[i].value_curr_mem & 0xFF00)>>8) & 0x00FF);
+      u8TxBuf[index++] = (unsigned char)(params[i].value_curr_mem & 0x00FF);
+    }
+  }
+  else
+  {
+    index = 0;
+    /*packet type unknown .. ignore it*/
+  }
+
+  if(index != 0)
+  {
+    crc16Val = crc16(u8TxBuf, index);
+    u8TxBuf[index++] = (unsigned char)(((crc16Val & 0xFF00)>>8) & 0x00FF);
+    u8TxBuf[index++] = (unsigned char)(crc16Val & 0x00FF);
+    Serial3.write(u8TxBuf, index);
+  }
+
+}
+
+/*void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
 {
   int sendDataLen = 0;
   unsigned short int crc16Val = 0;
@@ -756,7 +804,7 @@ void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
   else
   {
     sendDataLen = 0;
-    /*packet type unknown .. ignore it*/
+    //packet type unknown .. ignore it
   }
 
   if (sendDataLen != 0)
@@ -767,76 +815,61 @@ void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
     Serial3.write(u8TxBuffer, sendDataLen);
   }
 
-}
-
-String rxdata_buff;
-void serialEvent2() {
-  while (Serial2.available()) {
-    char inChar = (char)Serial2.read();
-    if (inChar == '$') {
-      comcnt = 1;
-      rxdata_buff = "";
-    }
-    if  (comcnt >= 1) {
-      rxdata_buff += inChar;
-      comcnt = comcnt + 1;
-      if (inChar == '&') {
-        if (comcnt >= 10) {
-          rxdata = rxdata_buff;
-          gCntrlSerialEventRecvd = true;
+}*/
+void Ctrl_ProcessRxData(void) 
+{
+  int index =0;
+  if((CtrlRxBuf[DEST_ADDR_INDEX] == DATA_AQUISITION_ADDR) && \
+      (CRCVerify(CtrlRxBuf, EvetDataLen) == true))
+  {
+    switch(CtrlRxBuf[FUNCTION_CODE_INDEX])
+    {
+      case READ_SENSORS_DATA_FC:
+      {
+        if((EvetDataLen == READ_SENSORS_CMD_LEN) && (CtrlRxBuf[DATA_PAYLOAD_INDEX] <= NUM_OF_SENSORS))
+        {
+          Send_Sensors_Data(CtrlRxBuf[DATA_PAYLOAD_INDEX]);   
+        }        
+      }
+      break;
+      case READ_CTRL_PARAMS_FC:
+      {
+        if((EvetDataLen == READ_CTRL_PARAMS_CMD_LEN) && (CtrlRxBuf[DATA_PAYLOAD_INDEX]<=MAX_CTRL_PARAMS))
+        {
+          Send_Contrl_Parameters(CtrlRxBuf[DATA_PAYLOAD_INDEX]);
         }
       }
-    }
-  }
-}
-
-void Ctrl_ProcessRxData(void) {
-  String p1;
-  String p2;
-  String p3;
-  String p4;
-  String payload;
-  String command;
-
-  p1 = rxdata.substring(1, 3);
-  p2 = rxdata.substring(3, 5);
-  p3 = rxdata.substring(5, 7);
-  p4 = rxdata.substring(7, 9);
-  payload = p3 + p4;
-  // int index = p3.toInt();
-  int value;
-  Serial.println(rxdata);
-  if (p1 == VENTSLAVE) {
-    if (p2 == SINGLEPARAM ) {
-
-    }
-    else if (p2 == SYNCH) {
-      //      Serial.println(rxdata);
-      geCtrlState = payload.toInt();
-    }
-    else if (p2 == ALLSENSORS) {
-
-    }
-    else if (p2 == ALLPARAM) {
-
-    }
-    else {
-      int index;
-      index =  payload.toInt();
-
-      if (index < MAX_CTRL_PARAMS)
+      break;
+      case SET_CTRL_STATE_FC:
       {
-        value = params[index].value_curr_mem;
-        command = getSensorReading(p2, value);
-        Serial2.print(command);
-        Serial.print(command);
+        if((EvetDataLen == SET_CTRL_STATE_CMD_LEN) && (CtrlRxBuf[DATA_PAYLOAD_INDEX] < CTRL_UNKNOWN_STATE))
+        {
+          geCtrlState = CtrlRxBuf[3];
+        }
       }
-
-    }
-
+      break;
+      default: 
+      {
+        if(CtrlRxBuf[FUNCTION_CODE_INDEX] == 0x04)
+        {
+          Set_SolenoidOnOff(CtrlRxBuf[3],CtrlRxBuf[4]);
+        }
+        else if(CtrlRxBuf[FUNCTION_CODE_INDEX] == 0x05)
+        {
+          Init_ControllerModule(CtrlRxBuf[3]);
+        }
+        else
+        {
+          
+        }        
+      }
+      break;
+    }    
   }
-
 }
+
+
+
 /*
    Function to send  specific the Calibrated Sensor Reading
 */
@@ -863,7 +896,8 @@ void Ctrl_StateMachine_Manager(void)
         if (bSendInitCommand == true)
         {
           bSendInitCommand = false;
-          Serial2.print(commands[INIT_MASTER]);
+          //Serial2.print(commands[INIT_MASTER]);
+          Init_ControllerModule(INIT_MASTER_FC);
           for (int index = 0; index < MAX_PS2_SAMPLES; index++)
           {
             ps2Samples[index] = 0xFFFF;
@@ -876,10 +910,11 @@ void Ctrl_StateMachine_Manager(void)
         /*When Peak Pressure Set in the UI is less than the sensor measured Peak PressureValue*/
         if (sensorOutputData[PS1].unitX10 > (params[PEAK_PRES].value_curr_mem * 10) )
         {
-          if (bSendPeakHighDetected == false)
+          if (bCommandSendFlag == false)
           {
-            bSendPeakHighDetected = true;
+            bCommandSendFlag = true;
             //Serial2.print(commands[INH_SOLE_OFF]);
+            Set_SolenoidOnOff(INHALE_SOLENOID_FC, SOLENOID_OFF);
           }
         }
       }
@@ -894,10 +929,11 @@ void Ctrl_StateMachine_Manager(void)
         /*When Peak Pressure Set in the UI is less than the sensor measured Peak PressureValue*/
         if (sensorOutputData[PS2].unitX10 < (params[PEEP_PRES].value_curr_mem * 10) )
         {
-          if (bSendPeepLowDetected == false)
+          if (bCommandSendFlag == false)
           {
-            bSendPeepLowDetected = true;
-            // Serial2.print(commands[EXH_SOLE_OFF]);
+            bCommandSendFlag = true;
+            //Serial2.print(commands[EXH_SOLE_OFF]);
+            Set_SolenoidOnOff(EXHALE_SOLENOID_FC, SOLENOID_OFF);
           }
         }
       }
@@ -909,12 +945,13 @@ void Ctrl_StateMachine_Manager(void)
       break;
     case CTRL_INHALE_DETECTION:
       {
-        if (bBreathDetectedFlag == false)
+        if (bCommandSendFlag == false)
         {
           if (checkForPs2Dip())
           {
-            bBreathDetectedFlag = true;
-            Serial2.print(commands[INIT_BREATH_DET]);
+            bCommandSendFlag = true;
+            //Serial2.print(commands[INIT_BREATH_DET]);
+            Init_ControllerModule(INIT_BREATH_DETECT);            
           }
         }
       }
@@ -930,10 +967,8 @@ void Ctrl_StateMachine_Manager(void)
   if (geCtrlPrevState != geCtrlState)
   {
     geCtrlPrevState = geCtrlState;
-    bSendInitCommand = false;
-    bSendPeakHighDetected = false;
-    bSendPeepLowDetected = false;
-    bBreathDetectedFlag = false;
+    bSendInitCommand = true;
+    bCommandSendFlag = false;
   }
 }
 
