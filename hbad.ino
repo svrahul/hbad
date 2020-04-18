@@ -129,7 +129,7 @@ void displayRunTime()
   row2 += params[IE_RATIO].value_curr_mem;
   lcd.setCursor(0, 2);
   lcd.print(row2);
-  
+
 
   String row3 = "PEEP:";
   row3 += params[PEEP_PRES].value_curr_mem;
@@ -191,6 +191,13 @@ void loop() {
     Ctrl_ProcessRxData();
   }
   Ctrl_StateMachine_Manager();
+  getGraphSensorsReading();
+  Serial.print((PS_ReadSensorValueX10(O2)) / 10);
+  Serial.print(" O2 ");
+  Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
+  Serial.print(" PS1 ");
+  Serial.print((PS_ReadSensorValueX10(PS2)) / 10);
+  Serial.println(" PS2 ");
 }
 
 
@@ -310,17 +317,17 @@ void moveDownEdit()
 
 void selectionEdit()
 {
-//  if ((editSeletIndicator + editScrollIndex) != MAX_EDIT_MENU_ITEMS)
-//  {
-//    //we are already in intial edit menu
-//    lcd.clear();
-//    lcd.setCursor(0, 1);
-//    lcd.print("You selected:");
-//    lcd.setCursor(0, 2);
-//    lcd.print(mainEditMenu[editSeletIndicator + editScrollIndex]);
-//    delay(1000);
-//    lcd.clear();
-//  }
+  //  if ((editSeletIndicator + editScrollIndex) != MAX_EDIT_MENU_ITEMS)
+  //  {
+  //    //we are already in intial edit menu
+  //    lcd.clear();
+  //    lcd.setCursor(0, 1);
+  //    lcd.print("You selected:");
+  //    lcd.setCursor(0, 2);
+  //    lcd.print(mainEditMenu[editSeletIndicator + editScrollIndex]);
+  //    delay(1000);
+  //    lcd.clear();
+  //  }
   lcd.clear();
   editSelectionMade = true;
 }
@@ -385,12 +392,12 @@ void showSaveSelectedParam()
 
     if (currPos == FIO2_PERC)
     {
-      lcd.setCursor(0,2);
+      lcd.setCursor(0, 2);
       lcd.print("Set using FiO2 valve");
     }
     else if (currPos == PEEP_PRES)
     {
-      lcd.setCursor(0,2);
+      lcd.setCursor(0, 2);
       lcd.print("Set using PEEP valve");
     }
     else
@@ -427,7 +434,7 @@ void showSaveSelectedParam()
 
       int diffValue = abs(oldValue - params[currPos].value_new_pot);
       Serial.print("diffValue "); Serial.println(diffValue);
-      if (diffValue>5)
+      if (diffValue > 5)
       {
         resetEditModetime = millis();
       }
@@ -501,7 +508,7 @@ void saveSelectedParam() {
     String command;
     String param;
 
-    if ((ROT_ENC_FOR_PEEP)||
+    if ((ROT_ENC_FOR_PEEP) ||
         (currPos == FIO2_PERC))
     {
       lcd.setCursor(0, 3);
@@ -509,14 +516,14 @@ void saveSelectedParam() {
       delay(500);
       return;
     }
-    
+
     if (ROT_ENC_FOR_IER || ROT_ENC_FOR_PEEP) {
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
-       if(params[currPos].parm_name ==IER){
+      if (params[currPos].parm_name == IER) {
         param = PARAM5;
       }
-       command = getSensorReading(param,params[currPos].value_curr_mem);
+      command = getSensorReading(param, params[currPos].value_curr_mem);
       Serial2.print(command);
       lcd.setCursor(0, 3);
       lcd.print("                    ");
@@ -528,15 +535,15 @@ void saveSelectedParam() {
     if (currentSaveFlag == 0) {
       lcd.print(" Edit cancelled.");
     } else {
-      
+
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
       storeParam(params[currPos]);
-      if(params[currPos].parm_name ==TIDAL_VOLUME){
+      if (params[currPos].parm_name == TIDAL_VOLUME) {
         param = PARAM1;
-      }else if(params[currPos].parm_name ==RR){
+      } else if (params[currPos].parm_name == RR) {
         param = PARAM2;
       }
-      command = getSensorReading(param,params[currPos].value_curr_mem);
+      command = getSensorReading(param, params[currPos].value_curr_mem);
       Serial2.print(command);
       lcd.setCursor(0, 3);
       lcd.print("                    ");
@@ -778,7 +785,7 @@ void Ctrl_ProcessRxData(void) {
   payload = p3 + p4;
   // int index = p3.toInt();
   int value;
-    Serial.println(rxdata);
+  Serial.println(rxdata);
   if (p1 == VENTSLAVE) {
     if (p2 == SINGLEPARAM ) {
 
@@ -801,8 +808,8 @@ void Ctrl_ProcessRxData(void) {
       {
         value = params[index].value_curr_mem;
         command = getSensorReading(p2, value);
-                Serial2.print(command);
-                Serial.print(command);
+        Serial2.print(command);
+        Serial.print(command);
       }
 
     }
@@ -957,17 +964,17 @@ void abc() {
         break;
     }
     if ((millis() - lastDisplayTime > 500) ||
-      (incr != 0))
+        (incr != 0))
     {
       lastDisplayTime = millis();
       if (ROT_ENC_FOR_IER) {
         newIER = rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
         //      cleanRow(1);
-        ;lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-        lcd.setCursor(3,1);
+        ; lcd.setCursor(VALUE1_DISPLAY_POS, 1);
+        lcd.setCursor(3, 1);
         lcd.print("New IER  1:");
         lcd.print(newIER);
-        lcd.setCursor(3,2);
+        lcd.setCursor(3, 2);
         lcd.print("Old IER  1:");
         lcd.print(oldIER);
         params[inex_rati.index].value_new_pot = newIER;
@@ -978,11 +985,31 @@ void abc() {
         params[peep_pres.index].value_curr_mem = newPeep;
         lcd.setCursor(VALUE1_DISPLAY_POS, 1);
         printPadded(newPeep);
-        lcd.setCursor(0,3);
+        lcd.setCursor(0, 3);
         lcd.print("set using PEEP valve");
       }
-      incr=0;
+      incr = 0;
     }
     lastCLK = currentCLK;
-  }while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
+  } while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
+}
+/*
+   Function to send all the Sensors Data for plotting the Graph
+*/
+String getGraphSensorsReading() {
+  String command;
+  for (int i = 0; i < MAX_CTRL_PARAMS; i++) {
+    command +=  params[i].value_curr_mem;
+    command += ",";
+  }
+  for (int i = 0; i < NUM_OF_SENSORS; i++) {
+    command +=  sensorOutputData[i].unitX10;
+    if (i != 4)
+      command += ",";
+  }
+  command += "\r\n";
+  // command+="/r";
+  //  Serial3.print(command);
+  Serial.print(command);
+  return command;
 }
