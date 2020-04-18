@@ -18,7 +18,6 @@ unsigned short newPeep = 5;
 long int resetEditModetime;
 int ctrlParamChangeInit = 0;
 volatile int switchMode = 0;
-volatile static short announced = 0;
 volatile boolean actionPending = false;
 int lastCLK;
 int currentCLK;
@@ -179,7 +178,6 @@ void loop() {
   {
     Serial.println("Entering Edit mode!");
     MsTimer2::stop();
-    //editMode();
     displayEditMenu();
     gCtrlParamUpdated = 1;
     editSeletIndicator = 0;
@@ -195,31 +193,6 @@ void loop() {
   Ctrl_StateMachine_Manager();
 }
 
-void editMode()
-{
-  lcd.clear();
-  switchMode = DISPLAY_MODE;
-  resetEditModetime = millis();
-  //  lastCLK = digitalRead(CLK);
-  Serial2.print(commands[SL_EN_PARM_EDT]);
-  do {
-    
-    //  sendCommands();
-    announce();
-    saveSensorData();
-    //  Serial.println("currPos before\t");
-    //  Serial.println(currPos);
-    //  Serial.println("currPos after\t");
-    //  Serial.println(currPos);
-    showSelectedParam();
-    saveSelectedParam();
-    if (!actionPending) {
-      delay(1000);
-    }
-  } while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
-  Serial2.print(commands[SL_COM_PARM_EDT]);
-  lcd.begin(LCD_LENGTH_CHAR, LCD_HEIGHT_CHAR);
-}
 
 typedef enum {
   E_EXIT,
@@ -378,6 +351,7 @@ void editModeEncoderInput(void)
 }
 
 long unsigned lastDisplayTime = 0;
+int oldValue;
 void showSaveSelectedParam()
 {
   RT_Events_T eRTState = RT_NONE;
@@ -450,6 +424,14 @@ void showSaveSelectedParam()
         lcd.print("    ");
         lcd.print(CANC_FLAG_CHOSEN);
       }
+
+      int diffValue = abs(oldValue - params[currPos].value_new_pot);
+      Serial.print("diffValue "); Serial.println(diffValue);
+      if (diffValue>50)
+      {
+        resetEditModetime = millis();
+      }
+      oldValue = params[currPos].value_new_pot;
     }
     //Serial.println("exiting showSaveSelectedParam");
   }
@@ -509,153 +491,6 @@ void displayEditMenu(void)
       }
     }
   } while (((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT) && (continueEditModeFlag));
-}
-
-
-void announce() {
-  if (announced == 0) {
-    listDisplayMode();
-    editParameterMode();
-    //announced = 1;
-  }
-}
-
-void listDisplayMode() {
-  if (switchMode == DISPLAY_MODE) {
-    lcd.setCursor(0, 0);
-    lcd.print(mode_headers[switchMode]);
-    unsigned int nextLine = 1;
-    for (int i = 0; i < MAX_CTRL_PARAMS; i += 2) {
-      cleanRow(nextLine);
-      lcd.setCursor(NAME1_DISPLAY_POS, nextLine);
-      lcd.print(params[i].parm_name);
-      lcd.setCursor(VALUE1_DISPLAY_POS, nextLine);
-      bool doNotSkipCalib = true;
-      if (i == inex_rati.index || i == peep_pres.index) {
-        doNotSkipCalib = false;
-      }
-      if (doNotSkipCalib) {
-        lcd.print(params[i].value_curr_mem);
-      } else {
-        if (i == inex_rati.index) {
-          lcd.print("1:");
-        }
-        lcd.print(params[i].value_curr_mem);
-      }
-      lcd.print(" ");
-      lcd.print(PAR_SEP_CHAR);
-      lcd.setCursor(NAME2_DISPLAY_POS, nextLine);
-      lcd.print(params[i + 1].parm_name);
-      lcd.setCursor(VALUE2_DISPLAY_POS, nextLine);
-      if (doNotSkipCalib) {
-        lcd.print(params[i + 1].value_curr_mem);
-      } else {
-        if ((i + 1) == inex_rati.index) {
-          lcd.print("1:");
-        }
-        lcd.print(params[i + 1].value_curr_mem);
-      }
-      nextLine++;
-    }
-  }
-}
-
-void editParameterMode() {
-  if (switchMode == EDIT_MODE) {
-    currPos = 0;
-    lcd.setCursor(0, 0);
-    lcd.print(mode_headers[switchMode]);
-    cleanColRow(2, 1);
-    for (int i = 2; i < LCD_HEIGHT_CHAR; i++) {
-      cleanRow(i);
-    }
-    while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT) {
-      if (switchMode != EDIT_MODE) {
-        return;
-      }
-      currentCLK = digitalRead(DISP_ENC_CLK);
-      int cursorIndex = 0;
-      if (currentCLK != lastCLK) {
-        //      currentCLK = digitalRead(DISP_ENC_CLK);
-        if (currentCLK != lastCLK && currentCLK == 1) {
-          if (digitalRead(DISP_ENC_DT) != currentCLK ) {
-            currPos--;
-            //            Serial.print("Left\t");
-          } else {
-            currPos++;
-            //            Serial.print("Right\t");
-          }
-          currPos = rectifyBoundaries(currPos, 0, MAX_CTRL_PARAMS - 1);
-          Serial.println(currPos);
-          resetEditModetime = millis();
-        }
-        lcd.setCursor(NAME1_DISPLAY_POS, 1);
-        lcd.print(params[currPos].parm_name);
-        if (currPos == inex_rati.index) {
-          if(newIER == 0){
-            newIER = inex_rati.value_curr_mem;
-          }
-          lcd.print(" 1:");
-          lcd.setCursor(VALUE1_DISPLAY_POS + 2, 1);
-          lcd.print(newIER);
-        } else {
-          lcd.setCursor(VALUE1_DISPLAY_POS, 1);
-          printPadded(params[currPos].value_curr_mem);
-        }
-      }
-      lastCLK = currentCLK;
-    }
-  }
-}
-
-void showSelectedParam() {
-  currentCLK = digitalRead(DISP_ENC_CLK);
-
-  while (switchMode == PAR_SELECTED_MODE) {
-    actionPending = true;
-    lcd.setCursor(8, 0);
-    lcd.print(params[currPos].parm_name);
-    if (currPos == inex_rati.index || currPos == peep_pres.index) {
-      abc();
-      return;
-    }
-    params[currPos].value_new_pot = analogRead(params[currPos].readPortNum);
-    lcd.setCursor(0, 1);
-    lcd.print("New: ");
-    lcd.print("   ");
-    lcd.setCursor(8, 1);
-    int actualValue = getCalibValue(params[currPos].value_new_pot, currPos);
-    printPadded(actualValue);
-    lcd.setCursor(15, 1);
-    lcd.print(params[currPos].units);
-    lcd.setCursor(0, 2);
-    lcd.print("Old: ");
-    lcd.setCursor(8, 2);
-    printPadded(params[currPos].value_curr_mem);
-    lcd.setCursor(15, 2);
-    lcd.print(params[currPos].units);
-    //    int storedValue = getCalibValue(params[currPos].value_curr_mem, currPos);
-    currentCLK = digitalRead(DISP_ENC_CLK);
-    if (currentCLK != lastCLK) {
-      currentSaveFlag = 1 - currentSaveFlag;
-      resetEditModetime = millis();
-      return;
-    }
-    lastCLK = currentCLK;
-    lcd.setCursor(0, 3);
-    if (currentSaveFlag == 1) {
-      lcd.print(SAVE_FLAG_CHOSEN);
-      lcd.print("    ");
-      lcd.print(CANC_FLAG);
-    } else {
-      lcd.print(SAVE_FLAG);
-      lcd.print("    ");
-      lcd.print(CANC_FLAG_CHOSEN);
-    }
-    resetEditModetime = millis();
-    processRotationInSelectedMode();
-    delay(mode_loop_delays[switchMode]);
-  }
 }
 
 void saveSelectedParam() {
@@ -724,7 +559,6 @@ void isr_processStartEdit() {
   }
   switchMode = (switchMode + 1) % 4;
   resetEditModetime = millis();
-  announced = 0;
   actionPending = 1;
   lastSwitchTime = switchTime;
 }
@@ -756,29 +590,6 @@ int rectifyBoundaries(int value, int minimum, int maximum) {
     return minimum;
   }
   return value;
-}
-
-void processRotationInSelectedMode() {
-  /*Index_select loop*/
-  unsigned long lastRotateTime = 0;
-  unsigned long rotateTime = millis();
-  currentCLK = digitalRead(DISP_ENC_CLK);
-  while (switchMode == PAR_SELECTED_MODE) {
-    if ((rotateTime - lastRotateTime) < DBNC_INTVL_ROT) {
-      return;
-    }
-    rotateTime = millis();
-    //Serial.println("abc");
-    currentCLK = digitalRead(DISP_ENC_CLK);
-    if (currentCLK != lastCLK) {
-      currentSaveFlag = 1 - currentSaveFlag;
-      resetEditModetime = millis();
-      return;
-    }
-    lastCLK = currentCLK;
-    lastRotateTime = rotateTime;
-    delay(5);
-  }
 }
 
 

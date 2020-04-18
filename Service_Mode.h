@@ -66,7 +66,7 @@ void diagAds1115(void);
 void diagSolStatus(void);
 void setup_service_mode ();
 void print_menu_common( menuIndex menuIdx);
-void editMode();
+void displayEditMenu(void);
 RT_Events_T encoderScanUnblocked();
 
 menuItemsT menuItems[MAX_MENUS] = 
@@ -352,7 +352,7 @@ void selection_init()
 {
   if  (initSelect == 1)
   {
-    editMode();
+    displayEditMenu();
   }
   else if (initSelect == 2)
   {
