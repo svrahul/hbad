@@ -850,7 +850,7 @@ void Ctrl_ProcessRxData(void)
       break;
       default: 
       {
-        if(CtrlRxBuf[FUNCTION_CODE_INDEX] == 0x04)
+        /*if(CtrlRxBuf[FUNCTION_CODE_INDEX] == 0x04)
         {
           Set_SolenoidOnOff(CtrlRxBuf[3],CtrlRxBuf[4]);
         }
@@ -861,7 +861,7 @@ void Ctrl_ProcessRxData(void)
         else
         {
           
-        }        
+        }*/        
       }
       break;
     }    
