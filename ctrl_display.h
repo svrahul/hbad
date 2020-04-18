@@ -51,17 +51,17 @@ typedef enum
   IE_RATIO,
   PEEP_PRES
 };
-const ctrl_parameter_t tidl_volu = {0, "TV", TIDAL_VOLUME_PIN,
+const ctrl_parameter_t tidl_volu = {0, "TV  ", TIDAL_VOLUME_PIN,
                                     200, 600,
                                     "ml   ", 50,
                                     0, 0
                                    };
-const ctrl_parameter_t resp_rate =    {1, "RR", RR_PIN,
+const ctrl_parameter_t resp_rate =    {1, "BPM ", RR_PIN,
                                        5, 35,
                                        "BPM  ", 1,
                                        0, 0
                                       };
-const ctrl_parameter_t peak_press =   {2, "PAW", PMAX_PIN,
+const ctrl_parameter_t peak_press =   {2, "PAW ", PMAX_PIN,
                                        40, 60,
                                        UNIT_CMH2O, 1,
                                        0, 0
@@ -71,12 +71,12 @@ const ctrl_parameter_t fio2_perc =    {3, "FiO2", FiO2_PIN,
                                        "%    ", 20,
                                        0, 0
                                       };
-const ctrl_parameter_t inex_rati =    {4, "IE", DISP_ENC_CLK, //READ THROUGH ENCODER
+const ctrl_parameter_t inex_rati =    {4, "IER ", DISP_ENC_CLK, //READ THROUGH ENCODER
                                        1, 3,
                                        "ratio", 1,
                                        0, 0
                                       };
-const ctrl_parameter_t peep_pres =    {5, "PP", DISP_ENC_CLK, //READ THROUGH ENCODER
+const ctrl_parameter_t peep_pres =    {5, "PEEP", DISP_ENC_CLK, //READ THROUGH ENCODER
                                        5, 20,
                                        UNIT_CMH2O, 5,
                                        0, 0

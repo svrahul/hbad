@@ -27,9 +27,9 @@
 #define START_DELIM '$'
 #define END_DELIM '&'
 #define VENT_MAST "VM"
-#define TIDAL_VOLUME "TV"
-#define RR "RR"
-#define IER "IE" 
+#define TIDAL_VOLUME tidl_volu.parm_name
+#define RR resp_rate.parm_name
+#define IER inex_rati.parm_name 
 #define PARAM1 "P1"
 #define PARAM2 "P2"
 #define PARAM5 "P5"

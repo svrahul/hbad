@@ -266,7 +266,7 @@ void editParameterMode() {
     currPos = 0;
     lcd.setCursor(0, 0);
     lcd.print(mode_headers[switchMode]);
-    cleanColRow(2, 1);
+    cleanColRow(4, 1);
     for (int i = 2; i < LCD_HEIGHT_CHAR; i++) {
       cleanRow(i);
     }
@@ -379,7 +379,7 @@ void saveSelectedParam() {
       return;
     }
     if (currentSaveFlag == 0) {
-      lcd.print(" Edit cancelled..........   ");
+      lcd.print("Edit cancelled......");
     } else {
       
       params[currPos].value_curr_mem = getCalibratedParamFromPot(params[currPos]);
@@ -391,7 +391,7 @@ void saveSelectedParam() {
       }
       command = getSensorReading(param,params[currPos].value_curr_mem);
       Serial2.print(command);
-      lcd.print(" saved.....");
+      lcd.print(" saved..........");
     }
     actionPending = false;
     switchMode = DISPLAY_MODE;
@@ -800,7 +800,7 @@ void abc() {
       resetEditModetime = millis();
     }
     if (ROT_ENC_FOR_IER) {
-      rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
+      newIER = rectifyBoundaries(newIER + incr, inex_rati.min_val, inex_rati.max_val);
 //      cleanRow(1);
       lcd.setCursor(VALUE1_DISPLAY_POS, 1);
       lcd.print("1:");
