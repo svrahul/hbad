@@ -406,7 +406,14 @@ void saveSensorData(void)
   for (index = 0; index< NUM_OF_SENSORS; index++)
   {
     sensorOutputData[index].mV = PS_ReadSensor(index);
-    temp = getSensorUnitsx10(index, sensorOutputData[index].mV);
+    if (index == O2)
+    {
+      temp = getSensorUnitsx10(index, sensorOutputData[index].mV+80);
+    }
+    else
+    {
+      temp = getSensorUnitsx10(index, sensorOutputData[index].mV);
+    }
     if (temp < 0)
     {
       sensorOutputData[index].unitX10 = 0;

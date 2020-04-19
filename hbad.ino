@@ -86,8 +86,8 @@ void setup() {
   Wire.setClock(4000000L);
   Wire.begin();
   hbad_mem.begin();
-  Serial.begin(19200);
-  Serial2.begin(19200);
+  Serial.begin(115200);
+  Serial2.begin(115200);
   Serial3.begin(9600);
   //attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
@@ -172,10 +172,16 @@ void loop() {
   if (gSensorDataUpdated == 1)
   {
     //checkForPs2Dip();
-    lcdRunTimerRefreshCount++;
-    if (lcdRunTimerRefreshCount == LCD_DISP_REFRESH_COUNT)
+    //lcdRunTimerRefreshCount++;
+    //if (lcdRunTimerRefreshCount == LCD_DISP_REFRESH_COUNT-4)
     {
       displayRunTime();
+      Serial.print((PS_ReadSensorValueX10(O2)) / 10);
+      Serial.print(" ");
+      Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
+      Serial.print(" ");
+      Serial.print((PS_ReadSensorValueX10(PS2)) / 10);
+      Serial.println(" ");
       lcdRunTimerRefreshCount = 0;
     }
     checkSendDataToGraphicsDisplay();
@@ -222,12 +228,12 @@ void loop() {
     digitalWrite(BUZZER_PIN, LOW);
   }
   getGraphSensorsReading();
-  Serial.print((PS_ReadSensorValueX10(O2)) / 10);
+/*  Serial.print((PS_ReadSensorValueX10(O2)) / 10);
   Serial.print(" O2 ");
   Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
   Serial.print(" PS1 ");
   Serial.print((PS_ReadSensorValueX10(PS2)) / 10);
-  Serial.println(" PS2 ");
+  Serial.println(" PS2 ");*/
 }
 
 
@@ -930,7 +936,7 @@ void Ctrl_StateMachine_Manager(void)
     case CTRL_COMPRESSION:
       {
         /*When Peak Pressure Set in the UI is less than the sensor measured Peak PressureValue*/
-        if (sensorOutputData[PS1].unitX10 > (params[PEAK_PRES].value_curr_mem * 10) )
+        if (sensorOutputData[PS1].unitX10 > ((params[PEAK_PRES].value_curr_mem -5) * 10) )
         {
           if (bSendPeakHighDetected == false)
           {
