@@ -396,7 +396,7 @@ int PS_ReadSensorValueX10(int Channel)
 
 void saveSensorData(void)
 {
-  int index=0;
+  int index=0, temp;
   #if DEBUG_PRINTS
   unsigned long timeUs;
   timeUs = micros();
@@ -406,15 +406,19 @@ void saveSensorData(void)
   for (index = 0; index< NUM_OF_SENSORS; index++)
   {
     sensorOutputData[index].mV = PS_ReadSensor(index);
-    sensorOutputData[index].unitX10 = getSensorUnitsx10(index, sensorOutputData[index].mV);
-    if (sensorOutputData[index].unitX10 < 0)
+    temp = getSensorUnitsx10(index, sensorOutputData[index].mV);
+    if (temp < 0)
     {
       sensorOutputData[index].unitX10 = 0;
     }
-    /*if (sensorOutputData[index].unitX10 > 999)
+    else
+    {
+      sensorOutputData[index].unitX10 = temp;
+    }
+    if (sensorOutputData[index].unitX10 > 999)
     {
       sensorOutputData[index].unitX10 = 999;
-    } */
+    }
   }
   //interrupts();
   #if DEBUG_PRINTS
