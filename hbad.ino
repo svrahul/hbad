@@ -10,7 +10,7 @@
 #include "./libraries/MsTimer2/MsTimer2.cpp"
 #include "Service_Mode.h"
 #include "Control_StateMachine.h"
-
+int TimeSeries =0;
 volatile short currPos = 1;
 unsigned short newIER = 1;
 unsigned short newPeep = 5;
@@ -217,6 +217,7 @@ void loop() {
    // bSendInitCommand = true;
     if(machineOn){
       Serial2.print(commands[STPR_STP]);
+      machineOn = false;
       bSendInitCommand = false;
     }else{
       machineOn = true;
@@ -779,41 +780,43 @@ void checkSendDataToGraphicsDisplay(void)
     UART3_SendDAQDataGraphicDisplay(PARAMS_DATA);
   }
   /*Send Sensor Values parameters to graphics module */
-  SensorValuesSendCount++;
-  if (SensorValuesSendCount > SEND_SENSOR_VALUES_COUNT)
-  {
+  //SensorValuesSendCount++;
+  //if (SensorValuesSendCount > SEND_SENSOR_VALUES_COUNT)
+  //{
     SensorValuesSendCount = 0;
     UART3_SendDAQDataGraphicDisplay(SENSORS_DATA);
-  }
+  //}
 }
 
 void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
 {
   int sendDataLen = 0;
   unsigned short int crc16Val = 0;
+  int index=0;
   if (ePacketType == SENSORS_DATA)
   {
-    u8TxBuffer[PACKET_LEN_INDEX] = TOTAL_SENSORS_PACKET_LEN;
-    u8TxBuffer[FUNCTION_CODE_INDEX] = SENSORS_DATA_FC;
-    u8TxBuffer[NUMBER_ELEMENTS_INDEX] = TOTAL_NUMBER_OF_SENSORS;
+    TimeSeries++;
+    u8TxBuffer[index++] = 0;
+    u8TxBuffer[index++] = SENSORS_DATA_FC;
+    u8TxBuffer[index++] = TOTAL_NUMBER_OF_SENSORS;
     for (int i = 0; i < TOTAL_NUMBER_OF_SENSORS; i++)
     {
-      u8TxBuffer[DATA_PAYLOAD_INDEX + i * 2] = (unsigned char)(((sensorOutputData[i].unitX10 & 0xFF00) >> 8) & 0x00FF);
-      u8TxBuffer[DATA_PAYLOAD_INDEX + i * 2 + 1] = (unsigned char)(sensorOutputData[i].unitX10 & 0x00FF);
+      u8TxBuffer[index++] = (unsigned char)(((sensorOutputData[i].unitX10 & 0xFF00) >> 8) & 0x00FF);
+      u8TxBuffer[index++] = (unsigned char)(sensorOutputData[i].unitX10 & 0x00FF);
     }
-    sendDataLen = TOTAL_SENSORS_PACKET_LEN;
+    u8TxBuffer[index++] = ((TimeSeries >>8) & 0xFF);
+    u8TxBuffer[index++] = (TimeSeries & 0xFF);
   }
   else if (ePacketType == PARAMS_DATA)
   {
-    u8TxBuffer[PACKET_LEN_INDEX] = TOTAL_PARAMS_PACKET_LEN;
-    u8TxBuffer[FUNCTION_CODE_INDEX] = PARAMETERS_DATA_FC;
-    u8TxBuffer[NUMBER_ELEMENTS_INDEX] = TOTAL_NUMBER_OF_PARAMS;
+    u8TxBuffer[index++] = TOTAL_PARAMS_PACKET_LEN;
+    u8TxBuffer[index++] = PARAMETERS_DATA_FC;
+    u8TxBuffer[index++] = TOTAL_NUMBER_OF_PARAMS;
     for (int i = 0; i < TOTAL_NUMBER_OF_PARAMS; i++)
     {
-      u8TxBuffer[DATA_PAYLOAD_INDEX + i * 2] = (unsigned char)(((params[i].value_curr_mem & 0xFF00) >> 8) & 0x00FF);
-      u8TxBuffer[DATA_PAYLOAD_INDEX + i * 2 + 1] = (unsigned char)(params[i].value_curr_mem & 0x00FF);
+      u8TxBuffer[index++] = (unsigned char)(((params[i].value_curr_mem & 0xFF00) >> 8) & 0x00FF);
+      u8TxBuffer[index++] = (unsigned char)(params[i].value_curr_mem & 0x00FF);
     }
-    sendDataLen = TOTAL_PARAMS_PACKET_LEN;
   }
   else
   {
@@ -821,12 +824,20 @@ void UART3_SendDAQDataGraphicDisplay(UartPacketTypeDef ePacketType)
     /*packet type unknown .. ignore it*/
   }
 
-  if (sendDataLen != 0)
+  if (index != 0)
   {
-    crc16Val = crc16(u8TxBuffer, u8TxBuffer[PACKET_LEN_INDEX] - 2);
-    u8TxBuffer[SENSORS_CRC_2B_INDEX] = (unsigned char)(((crc16Val & 0xFF00) >> 8) & 0x00FF);
-    u8TxBuffer[SENSORS_CRC_2B_INDEX + 1] = (unsigned char)(crc16Val & 0x00FF);
-    Serial3.write(u8TxBuffer, sendDataLen);
+    u8TxBuffer[0] = index+2;
+    crc16Val = crc16(u8TxBuffer, index);
+    u8TxBuffer[index++] = (unsigned char)(((crc16Val & 0xFF00) >> 8) & 0x00FF);
+    u8TxBuffer[index++] = (unsigned char)(crc16Val & 0x00FF);
+    Serial3.write(u8TxBuffer, index);
+    /*Serial.println("Graphics packet");
+    for(int i=0; i<index; i++)
+    {
+      Serial.print(String(u8TxBuffer[i])+ " ");
+    }
+    Serial.println(" ");
+    */
   }
 
 }
