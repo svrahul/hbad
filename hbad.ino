@@ -208,11 +208,14 @@ void loop() {
   if (digitalRead(RESET_SWITCH) == LOW)
   {
     //reset switch.
-    bSendInitCommand = true;
+   // bSendInitCommand = true;
     if(machineOn){
       Serial2.print(commands[STPR_STP]);
+      bSendInitCommand = false;
     }else{
       machineOn = true;
+       bSendInitCommand = true;
+       geCtrlState = CTRL_INIT;
     }
     digitalWrite(BUZZER_PIN, HIGH);
     delay(1000);
@@ -858,7 +861,7 @@ void Ctrl_ProcessRxData(void) {
   payload = p3 + p4;
   // int index = p3.toInt();
   int value;
-  Serial.println(rxdata);
+ // Serial.println(rxdata);
   if (p1 == VENTSLAVE) {
     if (p2 == SINGLEPARAM ) {
 
@@ -882,7 +885,7 @@ void Ctrl_ProcessRxData(void) {
         value = params[index].value_curr_mem;
         command = getSensorReading(p2, value);
         Serial2.print(command);
-        Serial.print(command);
+   //     Serial.print(command);
       }
 
     }
@@ -932,7 +935,7 @@ void Ctrl_StateMachine_Manager(void)
           if (bSendPeakHighDetected == false)
           {
             bSendPeakHighDetected = true;
-            //Serial2.print(commands[INH_SOLE_OFF]);
+            Serial2.print(commands[INH_SOLE_OFF]);
           }
         }
       }
@@ -950,7 +953,7 @@ void Ctrl_StateMachine_Manager(void)
           if (bSendPeepLowDetected == false)
           {
             bSendPeepLowDetected = true;
-            // Serial2.print(commands[EXH_SOLE_OFF]);
+            Serial2.print(commands[EXH_SOLE_OFF]);
           }
         }
       }
@@ -1111,8 +1114,6 @@ String getGraphSensorsReading() {
       command += ",";
   }
   command += "\r\n";
-  // command+="/r";
-  //  Serial3.print(command);
-  Serial.print(command);
+  Serial3.print(command);
   return command;
 }
