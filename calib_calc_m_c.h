@@ -411,10 +411,10 @@ void saveSensorData(void)
     {
       sensorOutputData[index].unitX10 = 0;
     }
-    if (sensorOutputData[index].unitX10 > 999)
+    /*if (sensorOutputData[index].unitX10 > 999)
     {
       sensorOutputData[index].unitX10 = 999;
-    }                                           
+    } */
   }
   //interrupts();
   #if DEBUG_PRINTS

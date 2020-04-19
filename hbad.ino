@@ -111,14 +111,14 @@ void displayRunTime()
   // cleanRow(1); cleanRow(2); cleanRow(3);
   String row1 = "TV:";
   row1 += params[TIDAL_VOL].value_curr_mem;
-  while (row1.length() != 6)
+  while (row1.length() < 6)
   {
     row1 += " ";
   }
   row1 += "mL      BPM:";
   row1 += params[BPM].value_curr_mem;
 
-  while (row1.length() != 20)
+  while (row1.length() < 20)
   {
     row1 += " ";
   }
@@ -129,7 +129,7 @@ void displayRunTime()
   row2 += (PS_ReadSensorValueX10(O2)) / 10;
   row2 += "%";
   //Serial.println((PS_ReadSensorValueX10(O2)) / 10);
-  while (row2.length() != 8)
+  while (row2.length() < 8)
   {
     row2 += " ";
   }
@@ -142,21 +142,21 @@ void displayRunTime()
   String row3 = "PEEP:";
   row3 += params[PEEP_PRES].value_curr_mem;
 
-  while (row3.length() != 7)
+  while (row3.length() < 7)
   {
     row3 += " ";
   }
 
   row3 += "  IP:";
   row3 += PS_ReadSensorValueX10(PS1) / 10;
-  while (row3.length() != 14)
+  while (row3.length() < 14)
   {
     row3 += " ";
   }
 
   row3 += " EP:";
   row3 += PS_ReadSensorValueX10(PS2) / 10;
-  while (row3.length() != 20)
+  while (row3.length() < 20)
   {
     row3 += " ";
   }
@@ -704,7 +704,7 @@ void displayChannelData(sensor_e sensor)
     {
       disp += ("cmH2O  ");
     }
-    while (disp.length() != LCD_LENGTH_CHAR)
+    while (disp.length() < LCD_LENGTH_CHAR)
     {
       disp += " ";
     }
