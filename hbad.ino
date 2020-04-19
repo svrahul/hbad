@@ -185,14 +185,19 @@ void loop() {
   eRTState = encoderScanUnblocked();
   if (eRTState == RT_BT_PRESS)
   {
-    Serial.println("Entering Edit mode!");
-    MsTimer2::stop();
-    displayEditMenu();
-    gCtrlParamUpdated = 1;
-    editSeletIndicator = 0;
-    editScrollIndex = 0;
-    MsTimer2::start();
-    runInitDisplay = true;
+    if (millis() - resetEditModetime > 500)
+    {
+      Serial.println("Entering Edit mode!");
+      MsTimer2::stop();
+      resetEditModetime = millis();
+      displayEditMenu();
+      gCtrlParamUpdated = 1;
+      editSeletIndicator = 0;
+      editScrollIndex = 0;
+      MsTimer2::start();
+      runInitDisplay = true;
+      resetEditModetime = millis();
+    }
   }
   if (gCntrlSerialEventRecvd == true)
   {
@@ -466,7 +471,7 @@ void showSaveSelectedParam()
         }
   
         int diffValue = abs(oldValue - params[currPos].value_new_pot);
-        Serial.print("diffValue "); Serial.println(diffValue);
+        //Serial.print("diffValue "); Serial.println(diffValue);
         if (diffValue>5)
         {
           resetEditModetime = millis();
@@ -484,7 +489,6 @@ void displayEditMenu(void)
   bool continueEditModeFlag = true;
   editSelectionMade = false;
   currentSaveFlag = false;
-  resetEditModetime = millis();
   do {
     if (editSelectionMade == false)
     {
