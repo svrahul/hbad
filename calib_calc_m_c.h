@@ -407,6 +407,14 @@ void saveSensorData(void)
   {
     sensorOutputData[index].mV = PS_ReadSensor(index);
     sensorOutputData[index].unitX10 = getSensorUnitsx10(index, sensorOutputData[index].mV);
+    if (sensorOutputData[index].unitX10 < 0)
+    {
+      sensorOutputData[index].unitX10 = 0;
+    }
+    if (sensorOutputData[index].unitX10 > 999)
+    {
+      sensorOutputData[index].unitX10 = 999;
+    }                                           
   }
   //interrupts();
   #if DEBUG_PRINTS

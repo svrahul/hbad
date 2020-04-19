@@ -89,7 +89,7 @@ void setup() {
   Serial.begin(19200);
   Serial2.begin(19200);
   Serial3.begin(9600);
-  attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
+  //attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
   setup_calib_calc_m_c();
   setup_service_mode();
@@ -179,6 +179,7 @@ void loop() {
       lcdRunTimerRefreshCount = 0;
     }
     checkSendDataToGraphicsDisplay();
+    gSensorDataUpdated= 0;
   }
 
   eRTState = encoderScanUnblocked();
@@ -483,6 +484,7 @@ void displayEditMenu(void)
   bool continueEditModeFlag = true;
   editSelectionMade = false;
   currentSaveFlag = false;
+  resetEditModetime = millis();
   do {
     if (editSelectionMade == false)
     {

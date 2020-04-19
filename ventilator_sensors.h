@@ -65,17 +65,25 @@ ads.begin();
 }
 
 
-
+#define I2C_TIMEOUT 120
 float ADS1115_ReadVolageOverI2C(int Channel)
 {
-  int ADCCount, AvgSampleCount;
-  float Avg10Samples;
-  float SumValue= 0.0, ADCThresH=0.0, ADCThresL=0.0;
   float PressSensorVolts=0.0;
+  long int timeout;
   for(int i=0; i<MaxAdcSamples; i++)
   {
+    timeout = millis();
     ads.readADC_SingleEnded(Channel);
-    while(digitalRead(ADS115_INT_PIN));
+    
+    while ((digitalRead(ADS115_INT_PIN)!=LOW) &&
+           ((millis()-timeout) < I2C_TIMEOUT))
+    {
+      //wait.
+    }
+    if((millis()-timeout) >= I2C_TIMEOUT)
+    {
+      Serial.println("I2C timed out, please check connection.");
+    }
     ADCSampleBuff[i] = ads.readADC_ConvertedSample();
     #if SERIAL_PRINTS
     Serial.print(ADCSampleBuff[i]);
