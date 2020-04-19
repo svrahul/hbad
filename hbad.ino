@@ -88,7 +88,7 @@ void setup() {
   hbad_mem.begin();
   Serial.begin(115200);
   Serial2.begin(115200);
-  Serial3.begin(9600);
+  Serial3.begin(115200);
   //attachInterrupt(digitalPinToInterrupt(DISP_ENC_SW), isr_processStartEdit, HIGH);
   getAllParamsFromMem();
   setup_calib_calc_m_c();
@@ -228,7 +228,7 @@ void loop() {
     delay(1000);
     digitalWrite(BUZZER_PIN, LOW);
   }
-  getGraphSensorsReading();
+ // getGraphSensorsReading();
 /*  Serial.print((PS_ReadSensorValueX10(O2)) / 10);
   Serial.print(" O2 ");
   Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
@@ -1131,6 +1131,6 @@ String getGraphSensorsReading() {
       command += ",";
   }
   command += "\r\n";
-  Serial3.print(command);
+  //Serial3.print(command);
   return command;
 }
