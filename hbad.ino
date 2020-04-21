@@ -94,6 +94,7 @@ void setup() {
   setup_calib_calc_m_c();
   setup_service_mode();
   displayInitialScreen();
+  displayO2settingScreen();
   MsTimer2::set(120, saveSensorData);
   MsTimer2::start();
   Serial.println("Exiting setup !");
@@ -431,19 +432,20 @@ void showSaveSelectedParam()
     if (o2LineChange)
     {
       // change tempO2LineSelect
-      o2LineChanger();
+      o2LineChanger(EDIT_MODE_TIMEOUT);
     }
     else
     {
       lcd.setCursor(8, 0);
       lcd.print(params[currPos].parm_name);
   
-      if (currPos == FIO2_PERC)
-      {
-        lcd.setCursor(0,2);
-        lcd.print("Set using FiO2 valve");
-      }
-      else if (currPos == PEEP_PRES)
+//      if (currPos == FIO2_PERC)
+//      {
+//        lcd.setCursor(0,2);
+//        lcd.print("Set using FiO2 valve");
+//      }
+//      else 
+      if (currPos == PEEP_PRES)
       {
         lcd.setCursor(0,2);
         lcd.print("Set using PEEP valve");
@@ -587,8 +589,8 @@ void saveSelectedParam() {
       return;
     }
 
-    if ((ROT_ENC_FOR_PEEP) ||
-        (currPos == FIO2_PERC))
+    if ((ROT_ENC_FOR_PEEP))// ||
+        //(currPos == FIO2_PERC))
     {
       lcd.setCursor(0, 3);
       lcd.print("   going back....");
@@ -769,6 +771,66 @@ void diagSolStatus(void)
 {
   //  Serial.println("we are in diagSolStatus");
 }
+
+
+
+void displayO2settingScreen(void)
+{
+  float SensorVolt;
+  int displayCounter = 0xFF;
+  RT_Events_T eRTState = RT_NONE;
+
+  //select O2 input line.
+  o2LineChanger(0xFFFF);//large timeout.
+  
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Set O2 level & match");
+  lcd.setCursor(0,1);
+  lcd.print("press knob when done");
+
+  while (eRTState != RT_BT_PRESS)
+  {
+    eRTState = encoderScanUnblocked();
+    switch (eRTState)
+    {
+      case   RT_BT_PRESS:
+        currentSaveFlag = true;
+        switchMode = PAR_SAVE_MODE;
+        currPos = FIO2_PERC;
+        saveSelectedParam();
+        break;
+    }
+    SensorVolt=ADC_ReadVolageOnATMega2560(OXYGEN_ANALOG_PIN);
+    int o2Percentage = (int) getX(SensorVolt + ((float)O2_FUDGE/1000),
+              sensorData[O2].m,
+              sensorData[O2].c);
+    if (o2Percentage < 0 )
+      o2Percentage = 0;
+    if (o2Percentage > 99)
+      o2Percentage = 99;
+    params[FIO2_PERC].value_new_pot = analogRead(params[FIO2_PERC].readPortNum);
+    int actualValue = getCalibValue(params[FIO2_PERC].value_new_pot, FIO2_PERC);
+    lcd.setCursor(0,2);
+    lcd.print("New:");
+    lcd.print(actualValue);
+    lcd.print("% ");
+    lcd.setCursor(10,2);
+    lcd.print("Old:");
+    lcd.print(params[FIO2_PERC].value_curr_mem);
+    lcd.print("% ");
+    if (displayCounter > 100)
+    {
+      lcd.setCursor(0,3);
+      lcd.print("measured:");
+      lcd.print(o2Percentage);
+      lcd.print("% ");
+      displayCounter = 0;
+    }
+    displayCounter++;
+  }
+}
+
 
 void checkSendDataToGraphicsDisplay(void)
 {
@@ -1010,10 +1072,11 @@ void Ctrl_StateMachine_Manager(void)
   }
 }
 
-void o2LineChanger() {
+void o2LineChanger(int timeoutValue) {
   RT_Events_T eRTState;
   lastDisplayTime = millis();
   resetEditModetime = millis();
+  lcd.clear();
   do {
     eRTState = encoderScanUnblocked();
     if (eRTState != RT_NONE)
@@ -1040,6 +1103,8 @@ void o2LineChanger() {
     if ((millis() - lastDisplayTime > 500) ||
       (eRTState != RT_NONE))
     {
+      lcd.setCursor(0,0);
+      lcd.print("select O2 input line");
       lcd.setCursor(0, 1);
       if (tempO2LineSelect == 0)
       {
@@ -1055,7 +1120,7 @@ void o2LineChanger() {
       }
       lastDisplayTime = millis();
     }
-  }while ((millis() - resetEditModetime) < EDIT_MODE_TIMEOUT);
+  }while ((millis() - resetEditModetime) < timeoutValue);
 }
 
 void abc() {

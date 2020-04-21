@@ -10,7 +10,7 @@
 #define MAX_PS2_SAMPLES 10
 #define THRESHOLD_COMPARE_INDEX 2
 #define DIP_THRESHOLD 5 //better to be lower than PEEP
-
+#define O2_FUDGE 80
 
 
 /*
@@ -408,7 +408,7 @@ void saveSensorData(void)
     sensorOutputData[index].mV = PS_ReadSensor(index);
     if (index == O2)
     {
-      temp = getSensorUnitsx10(index, sensorOutputData[index].mV+80);
+      temp = getSensorUnitsx10(index, sensorOutputData[index].mV + O2_FUDGE);
     }
     else
     {

@@ -11,7 +11,7 @@
 #define EDIT_MODE 1
 #define PAR_SELECTED_MODE 2
 #define PAR_SAVE_MODE 3
-#define POT_HIGH 1000
+#define POT_HIGH 1024
 
 /*Let us start writing from the 16th memory location.
    This means Parameter 1 will be stored in locs with addr 16, 17, 18, 19
@@ -67,8 +67,8 @@ const ctrl_parameter_t peak_press =   {2, "PIP ", PMAX_PIN,
                                        0, 0
                                       };
 const ctrl_parameter_t fio2_perc =    {3, "FiO2", FiO2_PIN,
-                                       20, 100,
-                                       "%    ", 20,
+                                       10, 100,
+                                       "%    ", 10,
                                        0, 0
                                       };
 const ctrl_parameter_t inex_rati =    {4, "IER ", DISP_ENC_CLK, //READ THROUGH ENCODER
