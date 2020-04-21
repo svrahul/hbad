@@ -165,6 +165,59 @@ void displayRunTime()
   lcd.print(row3);
 }
 
+void serialPrintToPlotter()
+{
+  Serial.print((PS_ReadSensorValueX10(O2)) / 10);
+  Serial.print(" ");
+  Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
+  Serial.print(" ");
+  Serial.print((PS_ReadSensorValueX10(PS2)) / 10);
+  Serial.println(" ");
+}
+
+#define O2_MIN_DIFF 5
+#define O2_MAX_DIFF 10
+#define PS1_MIN_LIMIT 10
+#define PS1_LEAK_BPM_MONITOR 2
+
+#define ALARM_O2_RANGE      0x1
+#define ALARM_PRESSURE_LEAK 0x2
+
+void checkAlarms()
+{
+  unsigned int raiseAlarm = 0;
+  static unsigned long PsAlarmDetectStartTime=0;
+  //O2 check
+  if ((((PS_ReadSensorValueX10(O2)) / 10) < (params[FIO2_PERC].value_curr_mem - O2_MIN_DIFF)) ||
+      (((PS_ReadSensorValueX10(O2)) / 10) > (params[FIO2_PERC].value_curr_mem + O2_MAX_DIFF)))
+  {
+    raiseAlarm |= ALARM_O2_RANGE;
+  }
+  //pressure sensors inhale and exhale
+  if ((PS_ReadSensorValueX10(PS1) < PS_ReadSensorValueX10(PS2))||
+       (PS_ReadSensorValueX10(PS1) < PS1_MIN_LIMIT) ||
+       (PS_ReadSensorValueX10(PS1) < params[PEEP_PRES].value_curr_mem))
+  {
+    /* 
+     * this can happen in exhale/hold cycle. but not on inhale cycle 
+     * check if this is consistent for entire breath
+     */
+    
+    if (PsAlarmDetectStartTime == 0)
+    {
+      PsAlarmDetectStartTime = millis();//note current time
+    }
+    else if ((millis - PsAlarmDetectStartTime) > (PS1_LEAK_BPM_MONITOR *60 * 1000 / params[BPM].value_curr_mem))
+    {
+      raiseAlarm |= ALARM_PRESSURE_LEAK;
+    }
+    
+  }
+  else
+  {
+    PsAlarmDetectStartTime = 0;
+  }
+}
 
 /* Project Main loop */
 
@@ -173,19 +226,10 @@ void loop() {
   if (gSensorDataUpdated == 1)
   {
     //checkForPs2Dip();
-    //lcdRunTimerRefreshCount++;
-    //if (lcdRunTimerRefreshCount == LCD_DISP_REFRESH_COUNT-4)
-    {
-      displayRunTime();
-      Serial.print((PS_ReadSensorValueX10(O2)) / 10);
-      Serial.print(" ");
-      Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
-      Serial.print(" ");
-      Serial.print((PS_ReadSensorValueX10(PS2)) / 10);
-      Serial.println(" ");
-      lcdRunTimerRefreshCount = 0;
-    }
+    displayRunTime();
+    serialPrintToPlotter();
     checkSendDataToGraphicsDisplay();
+    checkAlarms();
     gSensorDataUpdated= 0;
   }
 
@@ -230,12 +274,6 @@ void loop() {
     digitalWrite(BUZZER_PIN, LOW);
   }
  // getGraphSensorsReading();
-/*  Serial.print((PS_ReadSensorValueX10(O2)) / 10);
-  Serial.print(" O2 ");
-  Serial.print((PS_ReadSensorValueX10(PS1)) / 10);
-  Serial.print(" PS1 ");
-  Serial.print((PS_ReadSensorValueX10(PS2)) / 10);
-  Serial.println(" PS2 ");*/
 }
 
 
@@ -782,7 +820,27 @@ void displayO2settingScreen(void)
 
   //select O2 input line.
   o2LineChanger(0xFFFF);//large timeout.
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print(" Turn on the system ");
+  lcd.setCursor(0,1);
+  lcd.print("  press red button  ");
+  lcd.setCursor(0,2);
+  lcd.print("Don't yet connect to");
+  lcd.setCursor(0,3);
+  lcd.print("      PATIENT       ");
+
+  while (digitalRead(RESET_SWITCH) != LOW);
   
+  if(!machineOn){
+    machineOn = true;
+    Serial2.print(commands[INIT_MASTER]);
+  }
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
+    
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Set O2 level & match");
